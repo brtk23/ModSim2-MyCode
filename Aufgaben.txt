@@ -1,0 +1,8 @@
+Optional:
+- Eigenwertzerlegung (Eigenwerte vor allem) von Matrizen berechnen mithilfe von den Lösern
+    - det(A - I) = 0 LGS lösen.
+- Berechne Spektralradius von S = I - M^-1*A, gucke ob < 1 wenn konvergiert oder >=1 wenn nicht
+    - Spektralradius von S = größter Betrag vom Eigenwert der Matrix S
+- Prüfe ob die Matrix Symmetrisch Positiv Definit (spd.) ist.
+    - Matrix ist spd., wenn M = M^T und alle Eigenwerte positiv
+    - Gucke dann bei Jakobi ob nicht konvergiert, wenn Dämpfungsfaktor kacke, also 0 < A < 2/omega * D nicht gilt.

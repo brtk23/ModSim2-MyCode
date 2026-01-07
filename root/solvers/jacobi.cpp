@@ -38,16 +38,8 @@ bool Jacobi<TMatrix>::apply(vector_type& c, const vector_type& d) const
 	// Calculate element-wise for vector c:
 	// => c[i] = damp * d[i] / A(i,i)
 	for(std::size_t i = 0; i < n; ++i){
-		double diag = 0.0;
-		// find diagonal entry
-		auto b = A.begin(i);
-		auto e = A.end(i);
-		for(auto it = b; it != e; ++it){
-			if(it.col_index() == i){
-				diag = it.value();
-				break;
-			}
-		}
+		// direct access to diagonal
+		double diag = A(i, i);
 		if(diag < 1e-15) {
 			// zero diagonal entry - cannot proceed
 			std::cerr << "Jacobi: Zero or almost zero diagonal entry at row " << i << std::endl;

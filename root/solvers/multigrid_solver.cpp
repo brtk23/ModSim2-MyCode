@@ -18,13 +18,13 @@ MultiGridSolver<TMatrix>::MultiGridSolver(IterativeSolver<TMatrix> &smoother,
 }
 
 template <typename TMatrix>
-void MultiGridSolver<TMatrix>::solve(TMatrix &A, Vector &x, const Vector &b,
+bool MultiGridSolver<TMatrix>::solve(TMatrix &A, Vector &x, const Vector &b,
                                      std::size_t num_elements_per_dim) {
     if (num_elements_per_dim <= base_elements_per_dim) {
         // Directly use the base solver
         base_solver.set_matrix(&A);
         base_solver.solve(x, b);
-        return;
+        return true;
     }
     // Pre-smoothing to reduce high-frequency errors and thus interpolation errors
     for (int i = 0; i < num_pre_smooth; ++i) {
@@ -72,6 +72,8 @@ void MultiGridSolver<TMatrix>::solve(TMatrix &A, Vector &x, const Vector &b,
         smoother.set_matrix(&A);
         smoother.solve(x, b);
     }
+
+    return true;
 }
 
 // Explicit template instantiations.

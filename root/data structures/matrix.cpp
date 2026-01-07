@@ -56,112 +56,6 @@ void Matrix::resize(std::size_t r, std::size_t c, double val)
 
 
 
-template<bool is_const>
-Matrix::RowIteratorBase<is_const>::
-RowIteratorBase(typename Matrix::iterator_traits<is_const>::matrix_type& mat, std::size_t rowIndex) : pMat(&mat)
-{
-	if(mat.num_rows() <= rowIndex) {
-        throw std::runtime_error("ugh.. RowIteratorBase was instantiated with rowIndex > mat.num_rows()-1...");
-    }
-    pMat = &mat;
-    pRowIdx = rowIndex;
-    pColIdx = 0;
-}
-
-
-template<bool is_const>
-Matrix::RowIteratorBase<is_const>::
-RowIteratorBase
-(
-	typename Matrix::iterator_traits<is_const>::matrix_type& mat,
-	std::size_t rowIndex,
-	std::size_t startFromCol
-)
-{
-    //std::cout << "initializing iterator with matrix: " << std::endl;
-    //std::cout << mat << std::endl;
-    if(mat.num_rows() <= rowIndex) {
-        throw std::runtime_error("ugh.. RowIteratorBase was instantiated with rowIndex > mat.num_rows()-1...");
-    }
-    if (mat.num_cols() < startFromCol) {
-        throw std::runtime_error("nah... RowiteratorBase was instantiated with startFromCol higher than or equal to mat.num_cols().");
-    }
-    pMat = &mat;
-    pRowIdx = rowIndex;
-    pColIdx = startFromCol;
-}
-
-
-template<bool is_const>
-bool Matrix::RowIteratorBase<is_const>::operator!=(RowIteratorBase& other) const
-{
-	if (pMat != other.pMat){
-        return true;
-    }
-    return (pRowIdx != other.pRowIdx || pColIdx != other.pColIdx );
-}
-
-
-template<bool is_const>
-bool Matrix::RowIteratorBase<is_const>::operator==(RowIteratorBase& other) const
-{
-    if (pMat != other.pMat){
-        return false;
-    }
-    return (pRowIdx == other.pRowIdx && pColIdx == other.pColIdx);
-}
-
-
-template<bool is_const>
-Matrix::RowIteratorBase<is_const>& Matrix::RowIteratorBase<is_const>::operator++()
-{
-	++pColIdx;
-    return *this;
-}
-
-template<bool is_const>
-typename Matrix::iterator_traits<is_const>::entry_type Matrix::RowIteratorBase<is_const>::value() const
-{
-	return (*pMat)(pRowIdx, pColIdx);
-
-}
-
-template<bool is_const>
-typename Matrix::iterator_traits<is_const>::entry_type& Matrix::RowIteratorBase<is_const>::value()
-{
-    return (*pMat)(pRowIdx, pColIdx);
-}
-
-template<bool is_const>
-std::size_t Matrix::RowIteratorBase<is_const>::col_index() const
-{
-	return pColIdx;
-}
-
-
-
-Matrix::RowIterator Matrix::begin(std::size_t r)
-{
-	return RowIteratorBase<false>(*this, r);
-}
-
-
-Matrix::RowIterator Matrix::end(std::size_t r)
-{
-    return RowIteratorBase<false>(*this, r, this->num_cols());
-}
-
-
-Matrix::ConstRowIterator Matrix::begin(std::size_t r) const
-{
-	return RowIteratorBase<true>(*this, r);
-}
-
-
-Matrix::ConstRowIterator Matrix::end(std::size_t r) const
-{
-	return RowIteratorBase<true>(*this, r, this->num_cols());
-}
 
 
 double Matrix::operator()(std::size_t r, std::size_t c) const
@@ -256,6 +150,5 @@ void CreateScaledTranspose(Matrix& mT, const double s, const Matrix& m)
 
 
 // explicit template instantiations
-template class Matrix::RowIteratorBase<true>;
-template class Matrix::RowIteratorBase<false>;
+// Iterators removed for SIMD-friendly design; direct indexing is used.
 

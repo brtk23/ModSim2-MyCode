@@ -53,6 +53,9 @@ class SparseMatrix
 		// Return m_col_inds vector (for debugging)
 		const std::vector<size_t>&  get_col_inds() const { return m_col_inds; }
 
+		// Return row lengths (for debugging)
+		const std::vector<size_t>& get_row_len() const { return m_row_len; }
+
 		/// Resize the matrix
 		/**
 		 * The matrix is resized to the given sizes.
@@ -61,92 +64,7 @@ class SparseMatrix
 		 */
 		void resize(std::size_t r, std::size_t c, double defVal = 0.0);
 
-		// Efficient transpose of the matrix
-		
-
-	
 	public:
-		/// helper struct for templated iterator type
-		template <bool is_const, typename dummy = void>
-		struct iterator_traits
-		{
-			typedef SparseMatrix matrix_type;
-			typedef double entry_type;
-		};
-		template<typename dummy>
-		struct iterator_traits<true, dummy>
-		{
-			typedef const SparseMatrix matrix_type;
-			typedef const double entry_type;
-		};
-
-		/**
-		 * @brief row iterator nested class
-		 * We implement const and non-const version at the same time
-		 * using a bool template parameter.
-		 */
-		template <bool is_const>
-		class RowIteratorBase
-		{
-			public:
-				/// Constructor with row; set to first col
-				RowIteratorBase(typename iterator_traits<is_const>::matrix_type& mat, std::size_t rowIndex);
-
-				/**
-				 * @brief Constructor with row and col index
-				 * Sets iterator to first column with index greater than or equal to startFromCol.
-				**/
-				RowIteratorBase(typename iterator_traits<is_const>::matrix_type& mat, std::size_t rowIndex, std::size_t startFromCol);
-
-				/**
-				 * @brief Compares iterator with given iterator
-				 * @return true if iterators point to different positions
-				 */
-				bool operator!=(RowIteratorBase& other) const;
-				
-				/**
-				 * @brief Compares iterator with given iterator
-				 * @return true if iterators point to same position
-				 */
-				bool operator==(RowIteratorBase& other) const;
-
-				/// increment iterator to next position
-				RowIteratorBase& operator++();
-
-				/// value the iterator points to (read-only)
-				typename iterator_traits<is_const>::entry_type value() const;
-
-				/// value the iterator points to
-				typename iterator_traits<is_const>::entry_type& value();
-
-				/// column the iterator points to
-				std::size_t col_index() const;
-
-				friend class SparseMatrix;
-
-			private:
-				typename iterator_traits<is_const>::entry_type* pCurVal;
-				typename iterator_traits<is_const>::matrix_type* pMat;
-                const std::size_t* pCurInd;
-
-		};
-
-		typedef RowIteratorBase<false> RowIterator;
-		typedef RowIteratorBase<true> ConstRowIterator;
-
-
-	public:
-		/// iterator to first column entry of row
-		RowIterator begin(std::size_t r);
-
-		/// iterator to behind last column entry of row
-		RowIterator end(std::size_t r);
-
-		/// iterator to first column entry of row
-		ConstRowIterator begin(std::size_t r) const;
-
-		/// iterator to behind last column entry of row
-		ConstRowIterator end(std::size_t r) const;
 
 		/// Return whether entry exists
 		bool has_entry(std::size_t r, std::size_t c) const;
@@ -208,12 +126,19 @@ class SparseMatrix
          * @brief Sets all entries of the matrix to 0.
          */
         void clear();
+
+        /**
+         * @brief Clears a specific row (sets all entries to 0 and resets row length)
+         */
+        void clear_row(std::size_t r);
+		
     protected:
         std::size_t m_rows;
         std::size_t m_cols;
         std::size_t m_row_capacity;
         std::vector<double> m_values;
         std::vector<size_t> m_col_inds;
+		std::vector<size_t> m_row_len; // number of valid entries per row
         double m_zero = 0.0;
 
 };

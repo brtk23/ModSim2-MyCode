@@ -1,3 +1,7 @@
+- SparseMatrix ohne Iteratoren
+
+- Benchmark OpenMP (+ Kokkos?)
+
 Optional:
 - Eigenwertzerlegung (Eigenwerte vor allem) von Matrizen berechnen mithilfe von den Lösern
     - det(A - I) = 0 LGS lösen.

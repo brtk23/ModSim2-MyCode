@@ -69,33 +69,19 @@ void create2dPoissonSystemWithSize
     }
     Vector rhs_new(sz*sz, 0);
     size_t vector_index = 0;
-    //now port the entries into rhs vector
+    // now port the entries into rhs vector without iterators
     for(size_t i = 0; i < sz; ++i){
-
-        Matrix::RowIterator it = dummy.begin(i);
-        Matrix::RowIterator end= dummy.end(i);
-        for(; it != end; ++it){
-            rhs[vector_index] = it.value() ;
-            //if we have dirichlet boundary condition, substitute matrix
-            //row with identity row..
+        for(size_t j = 0; j < sz; ++j){
+            rhs[vector_index] = dummy(i, j);
+            // if we have dirichlet boundary condition, substitute matrix
+            // row with identity row
             if(rhs[vector_index] != 2.0){
-                typename TMatrix::RowIterator Ait = m.begin(vector_index);
-                typename TMatrix::RowIterator Aend= m.end(vector_index);
-                for(; Ait != Aend; ++Ait){
-                    size_t current_col = Ait.col_index();
-                    if(current_col == vector_index){
-                        m(vector_index, current_col) = 1.0;
-                    }
-                    else{
-                        m(vector_index, current_col) = 0;
-                    }
-
+                for(std::size_t current_col = 0; current_col < m.num_cols(); ++current_col){
+                    m(vector_index, current_col) = (current_col == vector_index) ? 1.0 : 0.0;
                 }
             }
             ++vector_index;
         }
-
-
     }
 
 }

@@ -50,17 +50,18 @@ bool LUSolver<TMatrix>::init(const vector_type& x)
 	}
 	
 	if (std::is_same<TMatrix, SparseMatrix>::value) {
-		// If matrix is sparse.
-		m_decomp = TMatrix(n, n, n); // worst case row capacity = n
+		// If matrix is sparse: create with worst-case capacity and copy non-zeros via indexed access
+		m_decomp = TMatrix(n, n, n);
 		for(std::size_t i = 0; i < n; ++i) {
-			auto b = A.begin(i);
-			auto e = A.end(i);
-			for(auto it = b; it != e; ++it) {
-				m_decomp(i, it.col_index()) = it.value();
+			for(std::size_t j = 0; j < n; ++j) {
+				double val = A(i, j);
+				if(val != 0.0) {
+					m_decomp(i, j) = val;
+				}
 			}
 		}
 	} else {
-		// If matrix is dense, use direct access]
+		// Dense matrix: direct copy via indexed access
 		m_decomp = TMatrix(n, n);
 		for(std::size_t i = 0; i < n; ++i) {
 			for(std::size_t j = 0; j < n; ++j) {

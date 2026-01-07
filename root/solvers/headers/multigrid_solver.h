@@ -14,8 +14,9 @@ class MultiGridSolver {
         // Destructor.
         ~MultiGridSolver() = default;
 
-        // Solve method
-        void solve(TMatrix &A, Vector &x, const Vector &b, 
+        // Solve method - solves A*x = b using multigrid approach.
+        // Returns true on success, false otherwise.
+        bool solve(TMatrix &A, Vector &x, const Vector &b, 
                    std::size_t num_elements_per_dim);
 
         void set_base_elements_per_dim(int elements_per_dim) {

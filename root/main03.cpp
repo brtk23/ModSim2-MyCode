@@ -17,6 +17,67 @@
 #include <iomanip>
 #include <cstdlib>
 #include <chrono>
+#include <functional>
+#include <string>
+
+// Color codes for output
+#define RESET   "\033[0m"
+#define GREEN   "\033[32m"
+#define RED     "\033[31m"
+#define YELLOW  "\033[33m"
+#define CYAN    "\033[36m"
+#define BOLD    "\033[1m"
+
+/**
+ * @brief Template timer class for benchmarking function calls
+ */
+template<typename Clock = std::chrono::high_resolution_clock>
+class Timer {
+public:
+    using Duration = std::chrono::duration<double, std::milli>;
+    
+    /**
+     * @brief Measure execution time of a function
+     * @param func Function/lambda to execute and time
+     * @return Execution time in milliseconds
+     */
+    template<typename Func>
+    double measure(Func&& func) {
+        auto start = Clock::now();
+        func();
+        auto end = Clock::now();
+        Duration duration = end - start;
+        return duration.count();
+    }
+    
+    /**
+     * @brief Measure execution time with return value
+     * @param func Function/lambda to execute and time
+     * @return Pair of (return value, execution time in ms)
+     */
+    template<typename Func>
+    auto measure_with_result(Func&& func) -> std::pair<decltype(func()), double> {
+        auto start = Clock::now();
+        auto result = func();
+        auto end = Clock::now();
+        Duration duration = end - start;
+        return {result, duration.count()};
+    }
+};
+
+/**
+ * @brief Print a formatted benchmark result
+ */
+void print_benchmark_result(const std::string& solver_name, double time_ms, bool converged) {
+    std::cout << std::left << std::setw(20) << solver_name << ": ";
+    std::cout << std::right << std::setw(10) << std::fixed << std::setprecision(3) << time_ms << " ms ";
+    if (converged) {
+        std::cout << GREEN << "CONVERGED" << RESET;
+    } else {
+        std::cout << RED << "FAILED" << RESET;
+    }
+    std::cout << std::endl;
+}
 
 // void TestSparseMatrixMatMulMinus() {
 //     // Test SparseMatrix::operator* against SparseMatrix::MatMulMinus
@@ -117,33 +178,20 @@ void create2dPoissonSystemWithSize
     }
     Vector rhs_new(sz*sz, 0);
     size_t vector_index = 0;
-    //now port the entries into rhs vector
+    // now port the entries into rhs vector without iterators
     for(size_t i = 0; i < sz; ++i){
-
-        Matrix::RowIterator it = dummy.begin(i);
-        Matrix::RowIterator end= dummy.end(i);
-        for(; it != end; ++it){
-            rhs[vector_index] = it.value() ;
-            //if we have dirichlet boundary condition, substitute matrix
-            //row with identity row..
+        for(size_t j = 0; j < sz; ++j){
+            rhs[vector_index] = dummy(i, j);
+            // if we have dirichlet boundary condition, substitute matrix
+            // row with identity row
             if(rhs[vector_index] != 2.0){
-                typename TMatrix::RowIterator Ait = m.begin(vector_index);
-                typename TMatrix::RowIterator Aend= m.end(vector_index);
-                for(; Ait != Aend; ++Ait){
-                    size_t current_col = Ait.col_index();
-                    if(current_col == vector_index){
-                        m(vector_index, current_col) = 1.0;
-                    }
-                    else{
-                        m(vector_index, current_col) = 0;
-                    }
-
-                }
+                // Must clear the row first to remove old Poisson stencil entries!
+                m.clear_row(vector_index);
+                // Now set only the diagonal entry
+                m(vector_index, vector_index) = 1.0;
             }
             ++vector_index;
         }
-
-
     }
 
 }
@@ -204,6 +252,114 @@ bool LU_test(size_t nElem){
     std::cout << "LU TEST COMPLETE :)" << std::endl;
     return true;
 }
+
+
+/**
+ * Run benchmarks for all solvers
+ */
+void run_solver_benchmarks(size_t nElemsPerDim) {
+    std::cout << "\n" << BOLD << YELLOW << std::string(80, '=') << RESET << std::endl;
+    std::cout << BOLD << CYAN << "SOLVER BENCHMARKS (" << nElemsPerDim << "x" << nElemsPerDim 
+              << " grid, " << nElemsPerDim * nElemsPerDim << " unknowns)" << RESET << std::endl;
+    std::cout << BOLD << YELLOW << std::string(80, '=') << RESET << "\n" << std::endl;
+
+    Timer<> timer;
+    
+    // Setup problem
+    SparseMatrix A(nElemsPerDim * nElemsPerDim, nElemsPerDim * nElemsPerDim, 20);
+    Vector b, x;
+    create2dPoissonSystemWithSize(A, b, nElemsPerDim);
+    
+    // Benchmark Jacobi
+    {
+        x.resize(b.size());
+        std::srand(0);
+        for (std::size_t i = 0; i < x.size(); ++i)
+            x[i] = std::rand() / (double) RAND_MAX;
+        
+        IterativeSolver<SparseMatrix> solver(A);
+        solver.set_convergence_params(50000, 1e-15, 1e-8);
+        solver.set_verbose(false);
+        Jacobi<SparseMatrix> jac;
+        solver.set_corrector(&jac);
+        solver.init(x);
+        
+        auto [converged, time] = timer.measure_with_result([&]() {
+            return solver.solve(x, b);
+        });
+        
+        print_benchmark_result("Jacobi", time, converged);
+    }
+    
+    // Benchmark Gauss-Seidel
+    {
+        x.resize(b.size());
+        std::srand(0);
+        for (std::size_t i = 0; i < x.size(); ++i)
+            x[i] = std::rand() / (double) RAND_MAX;
+        
+        IterativeSolver<SparseMatrix> solver(A);
+        solver.set_convergence_params(50000, 1e-15, 1e-8);
+        solver.set_verbose(false);
+        GaussSeidel<SparseMatrix> gs;
+        solver.set_corrector(&gs);
+        solver.init(x);
+        
+        auto [converged, time] = timer.measure_with_result([&]() {
+            return solver.solve(x, b);
+        });
+        
+        print_benchmark_result("Gauss-Seidel", time, converged);
+    }
+    
+    // Benchmark Multigrid
+    {
+        x.resize(b.size());
+        std::srand(0);
+        for (std::size_t i = 0; i < x.size(); ++i)
+            x[i] = std::rand() / (double) RAND_MAX;
+        
+        IterativeSolver<SparseMatrix> smoother(A);
+        smoother.set_convergence_params(5000, 1e-15, 1e-8);
+        smoother.set_verbose(false);
+        GaussSeidel<SparseMatrix> gs;
+        smoother.set_corrector(&gs);
+        
+        LUSolver<SparseMatrix> base_solver;
+        MultiGridSolver<SparseMatrix> mg(smoother, base_solver, 2, 2, 1, 2);
+        //mg.set_verbose(false);
+        
+        auto [converged, time] = timer.measure_with_result([&]() {
+            return mg.solve(A, x, b, nElemsPerDim);
+        });
+        
+        print_benchmark_result("Multigrid", time, converged);
+    }
+    
+    // Benchmark LU (only for small problems)
+    if (nElemsPerDim <= 20) {
+        x.resize(b.size());
+        std::srand(0);
+        for (std::size_t i = 0; i < x.size(); ++i)
+            x[i] = std::rand() / (double) RAND_MAX;
+        
+        LUSolver<SparseMatrix> lu;
+        lu.set_matrix(&A);
+        
+        auto time = timer.measure([&]() {
+            lu.init(x);
+            lu.solve(x, b);
+        });
+        
+        print_benchmark_result("LU Decomposition", time, true); // Direct solver always converges
+    } else {
+        std::cout << std::left << std::setw(20) << "LU Decomposition" << ": "
+                  << YELLOW << "SKIPPED (problem too large)" << RESET << std::endl;
+    }
+    
+    std::cout << "\n" << BOLD << YELLOW << std::string(80, '=') << RESET << "\n" << std::endl;
+}
+
 int main(int argc, char** argv)
 {
 
@@ -214,22 +370,22 @@ int main(int argc, char** argv)
     LU_test(5);
 
     // example for solving of poisson problem
-    size_t nElemsPerDim = 3;
-    SparseMatrix A;
-    Vector b, u;
+    size_t nElemsPerDim = 4;
+    SparseMatrix A(nElemsPerDim * nElemsPerDim, nElemsPerDim * nElemsPerDim, 5);
+    Vector b, x;
 
     create2dPoissonSystemWithSize(A, b, nElemsPerDim);
 
-    std::cout << "RHS vector looks like this:" << std::endl;
+    std::cout << "Vector b [from Ax = b] looks like this:" << std::endl;
     printVectorOnGrid(b, nElemsPerDim);
-    std::cout << "\nassembled Matrix A looks like this:" << std::endl;
+    std::cout << "\nAssembled Matrix A [from Ax = b] looks like this:" << std::endl;
     std::cout << A << std::endl;
-    u.resize(b.size());
+    x.resize(b.size());
 
     // create random starting values
     std::srand(0);
-    for (std::size_t i = 0;  i < u.size(); ++i)
-        u[i] = std::rand() / (double) RAND_MAX;
+    for (std::size_t i = 0;  i < x.size(); ++i)
+        x[i] = std::rand() / (double) RAND_MAX;
 
     // create iterative solver and set parameters
     IterativeSolver<SparseMatrix> iterative_solver(A);
@@ -237,7 +393,7 @@ int main(int argc, char** argv)
     
     // with set_verbose we should get a print every ~ k iterations
     // with information about current reduction rate etc.
-    iterative_solver.set_verbose(true);
+    iterative_solver.set_verbose(false);
 
 
     // create preconditioners:
@@ -246,46 +402,49 @@ int main(int argc, char** argv)
 
     // now set jacobi as preconditioner of iterative solver:
     iterative_solver.set_corrector(&jac);
-    iterative_solver.init(u);
+    iterative_solver.init(x);
     // start iteration scheme
-    bool success = iterative_solver.solve(u, b);
+    bool success = iterative_solver.solve(x, b);
 
-    std::cout << "Jacobi finished with solution: " << std::endl;
-    printVectorOnGrid(u, nElemsPerDim);
+    std::cout << "Jacobi finished with solution x = " << std::endl;
+    printVectorOnGrid(x, nElemsPerDim);
 
     // same for gauss seidel:
     iterative_solver.set_corrector(&gs);
-    for (std::size_t i = 0;  i < u.size(); ++i)
-        u[i] = std::rand() / (double) RAND_MAX;
+    for (std::size_t i = 0;  i < x.size(); ++i)
+        x[i] = std::rand() / (double) RAND_MAX;
 
-    iterative_solver.init(u);
-    success = iterative_solver.solve(u,b);
-    std::cout << "Gauss-Seidel finished with solution: " << std::endl;
-    printVectorOnGrid(u, nElemsPerDim);
+    iterative_solver.init(x);
+    success = iterative_solver.solve(x,b);
+    std::cout << "Gauss-Seidel finished with solution x = " << std::endl;
+    printVectorOnGrid(x, nElemsPerDim);
 
     // now multigrid with gauss seidel as smoother
-    iterative_solver.set_verbose(false); // no need to print in smoother
     LUSolver<SparseMatrix> base_solver;
     MultiGridSolver<SparseMatrix> mg(iterative_solver, base_solver, 2, 2, 1, 2);
-    for (std::size_t i = 0;  i < u.size(); ++i)
-        u[i] = std::rand() / (double) RAND_MAX;
+    for (std::size_t i = 0;  i < x.size(); ++i)
+        x[i] = std::rand() / (double) RAND_MAX;
     
-    mg.solve(A, u, b, nElemsPerDim);
-    std::cout << "Multigrid finished with solution: " << std::endl;
-    printVectorOnGrid(u, nElemsPerDim);
+    mg.solve(A, x, b, nElemsPerDim);
+    std::cout << "Multigrid finished with solution x =  " << std::endl;
+    printVectorOnGrid(x, nElemsPerDim);
 
     // do it with LU now
-    Matrix M;
     LUSolver<SparseMatrix> LU;
-
-    create2dPoissonSystemWithSize(M, b, nElemsPerDim);
-
+    for (std::size_t i = 0;  i < x.size(); ++i)
+        x[i] = std::rand() / (double) RAND_MAX;
     LU.set_matrix(&A);
-    LU.init(u);
-    LU.solve(u, b);
-    std::cout << "\nLU decomposition finished with solution: " << std::endl;
-    printVectorOnGrid(u, nElemsPerDim);
+    LU.init(x);
+    LU.solve(x, b);
+    std::cout << "\nLU decomposition finished with solution x = " << std::endl;
+    printVectorOnGrid(x, nElemsPerDim);
 
+    // Run benchmarks
+    std::cout << "\n\n" << BOLD << CYAN << "Starting Performance Benchmarks..." << RESET << std::endl;
+    
+    run_solver_benchmarks(5);
+    run_solver_benchmarks(10);
+    run_solver_benchmarks(20);
     
     return 0;
 }

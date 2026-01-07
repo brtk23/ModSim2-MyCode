@@ -43,22 +43,11 @@ bool GaussSeidel<TMatrix>::apply(vector_type& c, const vector_type& d) const {
 	// => c[i] = (d[i] - sum_{j<i} c[j] * A(i,j)) / A(i,i)
 	for(std::size_t i = 0; i < n; ++i){
 		double sigma = 0.0;
-		double diag = 0.0;
-
-		auto b = A.begin(i);
-		auto e = A.end(i);
-		for(auto it = b; it != e; ++it){
-			std::size_t j = it.col_index();
-			double aij = it.value();
-			if(j == i){
-				diag = aij;
-			} else if(j < i) {
-				sigma += aij * c[j];      // updated value
-			} //else { // j > i
-				//sigma += aij * oldC[j];  
-			//}
+		// accumulate lower triangular part using direct indexing
+		for(std::size_t j = 0; j < i; ++j){
+			sigma += A(i, j) * c[j];
 		}
-
+		double diag = A(i, i);
 		if(diag < 1e-15){
 			return false; // singular matrix
 		}

@@ -29,6 +29,23 @@ add_executable(ModSim2_Praktikum
 # Add the current source directory to the executable's include search path (for #include "...")
 target_include_directories(ModSim2_Praktikum PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 
+# Build unit tests
+add_executable(test_sparse_matrix
+    tests/test_sparse_matrix.cpp
+    "data structures/sparse_matrix.cpp"
+    "data structures/vector.cpp"
+    "data structures/matrix.cpp"
+)
+
+add_executable(test_vector
+    tests/test_vector.cpp
+    "data structures/vector.cpp"
+)
+
+# Add the current source directory to the test executables' include search path
+target_include_directories(test_sparse_matrix PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+target_include_directories(test_vector PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+
 
 
 # SETUP USING 

@@ -1,30 +1,27 @@
 #include "iterative_solver.h"
 #include "lu_solver.h"
+#include <tuple>
 
 template <typename TMatrix>
 class MultiGridSolver {
     public:
         // Constructor with parameters, smoother and base solver.
         MultiGridSolver(IterativeSolver<TMatrix> &smoother,
-                        LUSolver<TMatrix> &base_solver,
-                        int num_pre_smooth,
-                        int num_post_smooth,
-                        int num_cycles,
-                        int base_elements_per_dim = 2);
+                        LUSolver<TMatrix> &base_solver);
         // Destructor.
         ~MultiGridSolver() = default;
 
         // Solve method - solves A*x = b using multigrid approach.
-        // Returns true on success, false otherwise.
-        bool solve(TMatrix &A, Vector &x, const Vector &b, 
+        // Returns tuple of (converged, iterations).
+        std::tuple<bool, size_t> solve(TMatrix &A, Vector &x, const Vector &b, 
                    std::size_t num_elements_per_dim);
 
         void set_base_elements_per_dim(int elements_per_dim) {
             base_elements_per_dim = elements_per_dim;
         }
 
-        void set_num_cycles(int cycles) {
-            num_cycles = cycles;
+        void set_num_recursions(int recursions) {
+            num_recursions = recursions;
         }
 
         void set_num_pre_smooth(int pre_smooth) {
@@ -35,6 +32,20 @@ class MultiGridSolver {
             num_post_smooth = post_smooth;
         }
 
+        /// Sets the multigrid solver parameters.
+        /// 
+        /// \param pre_smooth Number of smoothing iterations to perform before recursion.
+        /// \param post_smooth Number of smoothing iterations to perform after recursion.
+        /// \param recursions Number of recursive multigrid levels to use.
+        /// \param base_elements_per_dim Number of base elements per dimension at the coarsest level.
+        void set_parameters(int pre_smooth, int post_smooth,
+                            int recursions, int base_elements_per_dim) {
+            num_pre_smooth = pre_smooth;
+            num_post_smooth = post_smooth;
+            num_recursions = recursions;
+            this->base_elements_per_dim = base_elements_per_dim;
+        }
+
         void set_smoother(IterativeSolver<TMatrix> &s) {
             smoother = s;
         }
@@ -43,12 +54,20 @@ class MultiGridSolver {
             base_solver = bs;
         }
 
+        void set_convergence_params(std::size_t max_iter, double min_def, double min_red) {
+            max_iterations = max_iter;
+            min_defect = min_def;
+            min_reduction = min_red;
+        }
+
+        void set_verbose(bool verbose) {bVerbose = verbose; }
+
         int get_base_elements_per_dim() const {
             return base_elements_per_dim;
         }
 
-        int get_num_cycles() const {
-            return num_cycles;
+        int get_num_recursions() const {
+            return num_recursions;
         }
 
         int get_num_pre_smooth() const {
@@ -67,11 +86,22 @@ class MultiGridSolver {
             return base_solver;
         }
 
+        bool get_verbose() const {
+            return bVerbose;
+        }
+
     private:
         IterativeSolver<TMatrix>& smoother;
         LUSolver<TMatrix>&        base_solver;
         int                       num_pre_smooth;
         int                       num_post_smooth;
-        int                       num_cycles;
+        int                       num_recursions;
         int                       base_elements_per_dim;
+        std::size_t               max_iterations;
+        double                    min_defect;
+        double                    min_reduction;
+        bool                      bVerbose;
+        
+        // Internal cycle method (single multigrid cycle)
+        void cycle(TMatrix &A, Vector &x, const Vector &b, std::size_t num_elements_per_dim);
 };

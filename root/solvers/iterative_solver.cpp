@@ -18,9 +18,9 @@ IterativeSolver<TMatrix>::IterativeSolver(const matrix_type& mat)
 {
 	this->m_pA = &mat;
 	m_corrector = nullptr;
-	m_nit = NULL;
-	m_minDef = NULL;
-	m_minRed = NULL;
+	m_nit = 5000;
+	m_minDef = 1e-15;
+	m_minRed = 1e-8;
 	m_bVerbose = false;
 	m_bInited = false;
 }
@@ -30,9 +30,9 @@ template <typename TMatrix>
 IterativeSolver<TMatrix>::IterativeSolver()
 {
 	m_corrector = nullptr;
-	m_nit = NULL;
-	m_minDef = NULL;
-	m_minRed = NULL;
+	m_nit = 5000;
+	m_minDef = 1e-15;
+	m_minRed = 1e-8;
 	m_bVerbose = false;
 	m_bInited = false;
 }
@@ -86,14 +86,14 @@ void IterativeSolver<TMatrix>::set_convergence_params
 
 
 template <typename TMatrix>
-bool IterativeSolver<TMatrix>::solve(vector_type& x, const vector_type& b) const
+std::tuple<bool, size_t> IterativeSolver<TMatrix>::solve(vector_type& x, const vector_type& b) const
 {
 	if(!m_bInited){
-		return false;
+		return {false, 0};
 	}
 
 	if(this->m_pA == nullptr){
-		return false;
+		return {false, 0};
 	}
 
 	vector_type d(b.size());
@@ -123,11 +123,11 @@ bool IterativeSolver<TMatrix>::solve(vector_type& x, const vector_type& b) const
 		if(m_corrector != nullptr){
 			bool bResult = m_corrector->apply(c, d);
 			if(!bResult){
-				return false;
+				return {false, iter};
 			}
 		} else {
 			std::cerr << "IterativeSolver: No corrector method set!" << std::endl;
-			return false;
+			return {false, iter};
 		}
 
 		// update solution x_i+1 = x_i + c_i
@@ -155,7 +155,7 @@ bool IterativeSolver<TMatrix>::solve(vector_type& x, const vector_type& b) const
 		}
 	}
 
-	return true;
+	return {true, iter};
 }
 
 

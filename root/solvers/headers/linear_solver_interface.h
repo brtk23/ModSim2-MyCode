@@ -8,6 +8,7 @@
 #ifndef LINEAR_SOLVER_INTERFACE_H
 #define LINEAR_SOLVER_INTERFACE_H
 
+#include <tuple>
 #include "../../data structures/headers/vector.h"
 #include "../../data structures/headers/matrix.h"
 
@@ -41,13 +42,14 @@ class ILinearSolver
 		 *
 		 * @param x  output: solution
 		 * @param b  input: right-hand side
-		 * @return   false on any failure; true otherwise
-		 */
-		virtual bool solve(vector_type& x, const vector_type& b) const = 0;
+		 * @return   tuple of (converged, iterations) - converged is false on any failure; true otherwise
+		*/
+		virtual std::tuple<bool, size_t> solve(vector_type& x, const vector_type& b) const = 0;
 
 	protected:
 		/// underlying matrix
 		const matrix_type* m_pA;
+
 };
 
 #endif // LINEAR_SOLVER_INTERFACE_H

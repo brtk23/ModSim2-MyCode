@@ -8,7 +8,7 @@
 #ifndef ITERATIVE_SOLVER_H
 #define ITERATIVE_SOLVER_H
 
-
+#include <tuple>
 #include "../../data structures/headers/vector.h"
 #include "preconditioner_interface.h"
 #include "linear_solver_interface.h"
@@ -71,15 +71,17 @@ class IterativeSolver
 		 *
 		 * @param x  output: solution
 		 * @param b  input: right-hand side
-		 * @return   false on any failure; true otherwise
-		 */
-		virtual bool solve(vector_type& x, const vector_type& b) const;
+		 * @return   tuple of (converged, iterations) - converged is false on any failure; true otherwise
+		*/
+		virtual std::tuple<bool, size_t> solve(vector_type& x, const vector_type& b) const;
 		
 		void set_verbose(bool verbose){m_bVerbose = verbose;}
+		
+		/// Get the corrector (preconditioner)
+		corrector_type* get_corrector() const { return m_corrector; }
 
 	private:
-		corrector_type* m_corrector; // corrector method
-
+		corrector_type* m_corrector; // preconditioner / corrector method
 		std::size_t m_nit; // maximal number of iterations
 		double m_minDef; // minimal defect
 		double m_minRed; // minimal reduction factor

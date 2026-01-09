@@ -48,9 +48,9 @@ class LUSolver
 		 *
 		 * @param x  output: solution
 		 * @param b  input: right-hand side
-		 * @return   false on any failure; true otherwise
+		 * @return   tuple of (success, iterations) - success is false on any failure; true otherwise, iterations is always 1 for direct solver
 		 */
-		bool solve(vector_type& x, const vector_type& b) const;
+		std::tuple<bool, size_t> solve(vector_type& x, const vector_type& b) const;
 
         void print(){
             std::cout << m_decomp << std::endl;

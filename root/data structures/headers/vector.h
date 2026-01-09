@@ -56,8 +56,7 @@ class Vector
 
 		/// Euclidean norm
 		double norm();
-
-
+		double norm() const;
 
 };
 

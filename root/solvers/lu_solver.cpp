@@ -90,17 +90,17 @@ bool LUSolver<TMatrix>::init(const vector_type& x)
 
 
 template <typename TMatrix>
-bool LUSolver<TMatrix>::solve(vector_type& x, const vector_type& b) const
+std::tuple<bool, size_t> LUSolver<TMatrix>::solve(vector_type& x, const vector_type& b) const
 {
 
 	if(!m_initialized) {
-		return false;
+		return {false, 0};
 	}
 	
 	std::size_t n = m_decomp.num_rows();
 	
 	if(x.size() != n || b.size() != n) {
-		return false;
+		return {false, 0};
 	}
 	
 	// Forward substitution: solve L*v = b
@@ -121,7 +121,7 @@ bool LUSolver<TMatrix>::solve(vector_type& x, const vector_type& b) const
 		x[i] /= m_decomp(i, i);
 	}
 	
-	return true;
+	return {true, 1}; // Direct solver always completes in 1 "iteration"
 }
 
 

@@ -13,6 +13,17 @@ set(CMAKE_CXX_STANDARD 17)
 # Require the specified C++ standard (fail if compiler doesn't support it)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+# Option to disable OpenMP (default is ON)
+option(USE_OPENMP "Enable OpenMP parallelization" ON)
+
+# Find and configure OpenMP
+if(USE_OPENMP)
+    find_package(OpenMP REQUIRED)
+else()
+    # Add -fno-openmp flag to ignore OpenMP pragmas
+    add_compile_options(-fno-openmp)
+endif()
+
 # Create an executable named "solver" from the listed source files
 add_executable(ModSim2_Praktikum
     main03.cpp
@@ -28,6 +39,11 @@ add_executable(ModSim2_Praktikum
 
 # Add the current source directory to the executable's include search path (for #include "...")
 target_include_directories(ModSim2_Praktikum PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+
+# Link OpenMP to main executable
+if(USE_OPENMP)
+    target_link_libraries(ModSim2_Praktikum PRIVATE OpenMP::OpenMP_CXX)
+endif()
 
 # Build unit tests
 add_executable(test_sparse_matrix
@@ -45,6 +61,12 @@ add_executable(test_vector
 # Add the current source directory to the test executables' include search path
 target_include_directories(test_sparse_matrix PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 target_include_directories(test_vector PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+
+# Link OpenMP to test executables
+if(USE_OPENMP)
+    target_link_libraries(test_sparse_matrix PRIVATE OpenMP::OpenMP_CXX)
+    target_link_libraries(test_vector PRIVATE OpenMP::OpenMP_CXX)
+endif()
 
 
 

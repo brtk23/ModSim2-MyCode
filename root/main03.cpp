@@ -426,9 +426,10 @@ int main(int argc, char** argv)
     // Run benchmarks
     std::cout << "\n\n" << BOLD << CYAN << "Starting Performance Benchmarks..." << RESET << std::endl;
     
-    for (int i = 1; i <= 5; ++i) {
-        run_solver_benchmarks(i*10, false, true, true, true);
+    for (int i = 1; i <= 6; ++i) {
+        run_solver_benchmarks(i*10, false, false, false, true);
     }
+    //TODO: fix multigrid convergence rate for large problems!
 
     return 0;
 }

@@ -106,13 +106,13 @@ std::tuple<bool, size_t> IterativeSolver<TMatrix>::solve(vector_type& x, const v
 
 	if(m_bVerbose) {
 		std::cout << "## Iterative solver #############################################################" << std::endl;
-		std::cout << "Iter\tDefect\t\tRequired\tRate\t\tReduction\tRequired" << std::endl;
+		std::cout << "Iter\tDefect\t\tRate\t\tReduction" << std::endl;
 	}
 
 	std::size_t iter = 0;
 	do {
-		// compute defect d_i = b - A*x_i (already parallelized in Vector::operator-)
-		d = b - (*(this->m_pA)) * (x); // TODO MatMulMinus
+		// compute defect d_i = b - A*x_i
+		d = b - (*(this->m_pA)) * (x); // TODO: MatMulMinus
 		if(iter == 0){
 			norm_d0 = d.norm();
 		}
@@ -141,11 +141,11 @@ std::tuple<bool, size_t> IterativeSolver<TMatrix>::solve(vector_type& x, const v
 			if(iter > 0) rate = norm_di / norm_di_prev;
 			if(iter > 0) reduction = norm_di / norm_d0;
 			std::cout << iter << "\t" << std::scientific << std::setprecision(6) 
-					  << norm_di << "\t" << std::setprecision(3) << m_minDef << "\t";
-			if(iter==0) std::cout << "----------"; else std::cout << std::setprecision(3) << rate;
-			std::cout << "\t";
-			if(iter==0) std::cout << "-------------"; else std::cout << std::setprecision(6) << reduction;
-			std::cout << "\t" << std::setprecision(3) << m_minRed << std::endl;
+					  << norm_di << "\t";
+			if(iter==0) std::cout << "----------\t"; 
+            else std::cout << std::fixed << std::setprecision(6) << rate << "\t";
+            if(iter==0) std::cout << "-------------\n"; 
+            else std::cout << std::scientific << std::setprecision(6) << reduction << std::endl;
 		}
 
 		++iter;

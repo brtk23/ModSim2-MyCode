@@ -111,7 +111,7 @@ std::tuple<bool, size_t> IterativeSolver<TMatrix>::solve(vector_type& x, const v
 
 	std::size_t iter = 0;
 	do {
-		// compute defect d_i = b - A*x_i 
+		// compute defect d_i = b - A*x_i (already parallelized in Vector::operator-)
 		d = b - (*(this->m_pA)) * (x); // TODO MatMulMinus
 		if(iter == 0){
 			norm_d0 = d.norm();
@@ -123,6 +123,7 @@ std::tuple<bool, size_t> IterativeSolver<TMatrix>::solve(vector_type& x, const v
 		if(m_corrector != nullptr){
 			bool bResult = m_corrector->apply(c, d);
 			if(!bResult){
+				std::cerr << "IterativeSolver: Corrector application failed!" << std::endl;
 				return {false, iter};
 			}
 		} else {
@@ -130,8 +131,11 @@ std::tuple<bool, size_t> IterativeSolver<TMatrix>::solve(vector_type& x, const v
 			return {false, iter};
 		}
 
-		// update solution x_i+1 = x_i + c_i
-		x += c;
+		// update solution x_i+1 = x_i + c_i (parallelized with SIMD)
+		#pragma omp parallel for simd schedule(static)
+		for(std::size_t i = 0; i < x.size(); ++i) {
+			x[i] += c[i];
+		}
 
 		if(m_bVerbose) {
 			if(iter > 0) rate = norm_di / norm_di_prev;
@@ -147,15 +151,17 @@ std::tuple<bool, size_t> IterativeSolver<TMatrix>::solve(vector_type& x, const v
 		++iter;
 	} while((norm_di > m_minDef) && (norm_di > m_minRed * norm_d0) && (iter < m_nit));
 
-	if(m_bVerbose){
-		if(norm_di <= m_minDef || norm_di <= m_minRed * norm_d0){
+	if(norm_di <= m_minDef || norm_di <= m_minRed * norm_d0){
+		if (m_bVerbose) {
 			std::cout << "IterativeSolver: Converged in " << iter << " iterations." << std::endl;
-		} else {
+		}
+		return {true, iter};
+	} else {
+		if (m_bVerbose) {
 			std::cout << "IterativeSolver: Not converged after " << iter << " iterations." << std::endl;
 		}
+		return {false, iter};
 	}
-
-	return {true, iter};
 }
 
 

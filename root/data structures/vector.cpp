@@ -26,7 +26,6 @@ Vector::~Vector()
 
 Vector& Vector::operator=(double d)
 {
-	#pragma omp parallel for simd
 	for(std::size_t i = 0; i < this->size(); ++i){
 		(*this)[i] = d;
 	}
@@ -37,7 +36,6 @@ Vector& Vector::operator=(double d)
 Vector& Vector::operator+=(const Vector& v)
 {
     assert(this->size() == v.size());
-	#pragma omp parallel for simd
 	for(std::size_t i = 0; i < this->size(); ++i){
 		(*this)[i] += v[i];
 	}
@@ -47,7 +45,6 @@ Vector& Vector::operator+=(const Vector& v)
 Vector& Vector::operator-=(const Vector& v)
 {
     assert(this->size() == v.size());
-	#pragma omp parallel for simd
 	for(std::size_t i = 0; i < this->size(); ++i){
 		(*this)[i] -= v[i];
 	}
@@ -57,7 +54,6 @@ Vector& Vector::operator-=(const Vector& v)
 
 Vector& Vector::operator*=(double d)
 {
-	#pragma omp parallel for simd
 	for(std::size_t i = 0; i < this->size(); ++i){
 		(*this)[i] *= d;
 	}
@@ -69,7 +65,6 @@ Vector Vector::operator+(const Vector& v) const
 {
     assert(this->size() == v.size());
 	Vector result(this->size());
-	#pragma omp parallel for simd
 	for(std::size_t i = 0; i < this->size(); ++i){
 		result[i] = (*this)[i] + v[i];
 	}
@@ -81,7 +76,6 @@ Vector Vector::operator-(const Vector& v) const
 {
     assert(this->size() == v.size());
 	Vector result(this->size());
-	#pragma omp parallel for simd
 	for(std::size_t i = 0; i < this->size(); ++i){
 		result[i] = (*this)[i] - v[i];
 	}
@@ -92,7 +86,6 @@ Vector Vector::operator-(const Vector& v) const
 Vector Vector::operator*(double d) const
 {
     Vector result(this->size());
-	#pragma omp parallel for simd
 	for(std::size_t i = 0; i < this->size(); ++i){
 		result[i] = (*this)[i] * d;
 	}
@@ -104,7 +97,6 @@ double Vector::operator*(const Vector& v) const
 {
     assert(this->size() == v.size());
 	double result = 0.0;
-	#pragma omp parallel for simd reduction(+:result)
 	for(std::size_t i = 0; i < this->size(); ++i){
 		result += (*this)[i] * v[i];
 	}
@@ -115,7 +107,6 @@ double Vector::operator*(const Vector& v) const
 double Vector::norm()
 {
     double sum = 0.0;
-	#pragma omp parallel for simd reduction(+:sum)
 	for(std::size_t i = 0; i < this->size(); ++i){
 		sum += (*this)[i] * (*this)[i];
 	}
@@ -125,7 +116,6 @@ double Vector::norm()
 double Vector::norm() const
 {
 	double sum = 0.0;
-	#pragma omp parallel for simd reduction(+:sum)
 	for(std::size_t i = 0; i < this->size(); ++i){
 		sum += (*this)[i] * (*this)[i];
 	}

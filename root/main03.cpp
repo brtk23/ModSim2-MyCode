@@ -287,7 +287,9 @@ void BasicTests(size_t nElemsPerDim = 3)
 /**
  * Run benchmarks for all solvers
  */
-void run_solver_benchmarks(size_t nElemsPerDim, bool bVerbose = false) {
+void run_solver_benchmarks(size_t nElemsPerDim, bool bVerbose = false,
+                           bool bJacobi = true, bool bGaussSeidel = true,
+                           bool bMultigrid = true) {
     std::cout << "\n" << BOLD << YELLOW << std::string(80, '=') << RESET << std::endl;
     std::cout << BOLD << CYAN << "SOLVER BENCHMARKS (" << nElemsPerDim << "x" << nElemsPerDim 
               << " grid, " << nElemsPerDim * nElemsPerDim << " unknowns)" << RESET << std::endl;
@@ -323,7 +325,7 @@ void run_solver_benchmarks(size_t nElemsPerDim, bool bVerbose = false) {
     }
 
     // Benchmark Jacobi
-    {
+    if (bJacobi) {
         x.resize(b.size());
         std::srand(0);
         for (std::size_t i = 0; i < x.size(); ++i)
@@ -347,14 +349,14 @@ void run_solver_benchmarks(size_t nElemsPerDim, bool bVerbose = false) {
     }
     
     // Benchmark Gauss-Seidel
-    {
+    if (bGaussSeidel) {
         x.resize(b.size());
         std::srand(0);
         for (std::size_t i = 0; i < x.size(); ++i)
             x[i] = std::rand() / (double) RAND_MAX;
         
         IterativeSolver<SparseMatrix> solver(A);
-        solver.set_convergence_params(1000, 1e-15, 1e-8);
+        solver.set_convergence_params(50000, 1e-15, 1e-8);
         solver.set_verbose(bVerbose);
         GaussSeidel<SparseMatrix> gs;
         solver.set_corrector(&gs);
@@ -371,23 +373,24 @@ void run_solver_benchmarks(size_t nElemsPerDim, bool bVerbose = false) {
     }
     
     // Benchmark Multigrid
-    {
+    if (bMultigrid) {
         x.resize(b.size());
         std::srand(0);
         for (std::size_t i = 0; i < x.size(); ++i)
             x[i] = std::rand() / (double) RAND_MAX;
         
         IterativeSolver<SparseMatrix> smoother(A);
-        smoother.set_convergence_params(1000, 1e-15, 1e-8);
+        smoother.set_convergence_params(50000, 1e-15, 1e-8);
         smoother.set_verbose(false); // no verbose for smoother
-        GaussSeidel<SparseMatrix> gs;
+        GaussSeidel<SparseMatrix> gs; // fastest smoother
+        //Jacobi<SparseMatrix> jac;
         smoother.set_corrector(&gs);
         smoother.init(x);
         
         LUSolver<SparseMatrix> base_solver;
         MultiGridSolver<SparseMatrix> mg(smoother, base_solver);
         mg.set_parameters(2, 2, 1, 3);
-        mg.set_convergence_params(500, 1e-15, 1e-8);
+        mg.set_convergence_params(5000, 1e-15, 1e-8);
         mg.set_verbose(bVerbose);
         
         auto [result, time] = timer.measure_with_result([&]() {
@@ -423,11 +426,10 @@ int main(int argc, char** argv)
     // Run benchmarks
     std::cout << "\n\n" << BOLD << CYAN << "Starting Performance Benchmarks..." << RESET << std::endl;
     
-    run_solver_benchmarks(5, false);
-    run_solver_benchmarks(10, false);
-    run_solver_benchmarks(20, false);
-    run_solver_benchmarks(100, false);
-    
+    for (int i = 1; i <= 5; ++i) {
+        run_solver_benchmarks(i*10, false, true, true, true);
+    }
+
     return 0;
 }
 

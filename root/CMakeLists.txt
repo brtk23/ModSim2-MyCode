@@ -13,6 +13,11 @@ set(CMAKE_CXX_STANDARD 17)
 # Require the specified C++ standard (fail if compiler doesn't support it)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+# Add optimization flags for Release builds
+if(CMAKE_BUILD_TYPE STREQUAL "Release")
+    add_compile_options(-O3 -march=native -mtune=native -ffast-math -funroll-loops)
+endif()
+
 # Option to disable OpenMP (default is ON)
 option(USE_OPENMP "Enable OpenMP parallelization" ON)
 
@@ -72,9 +77,9 @@ endif()
 
 # SETUP USING 
 #cd 'c:\Users\mia-l\Documents\code\Uni\ModSim 2\My code\root';  
-#cmake -G "MinGW Makefiles" -DCMAKE_BUILD_TYPE=Release -S . -B build
+#cmake -G "MinGW Makefiles" -DCMAKE_BUILD_TYPE=Release -DUSE_OPENMP=ON -S . -B build
 # FOR DEBUG SETUP USING
-#cmake -G "MinGW Makefiles" -DCMAKE_BUILD_TYPE=Debug -S . -B build  
+#cmake -G "MinGW Makefiles" -DCMAKE_BUILD_TYPE=Debug -DUSE_OPENMP=ON -S . -B build  
 
 # BUILD USING
 #cmake --build build

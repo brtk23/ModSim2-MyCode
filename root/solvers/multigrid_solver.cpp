@@ -22,6 +22,9 @@ MultiGridSolver<TMatrix>::MultiGridSolver(IterativeSolver<TMatrix> &smoother,
 template <typename TMatrix>
 void MultiGridSolver<TMatrix>::cycle(TMatrix &A, Vector &x, const Vector &b,
                                        std::size_t num_elements_per_dim) {
+    // Always bind the smoother to the matrix of the current level
+    smoother.set_matrix(&A);
+
     if (num_elements_per_dim <= base_elements_per_dim) {
         // Directly use the base solver
         base_solver.set_matrix(&A);
@@ -34,7 +37,11 @@ void MultiGridSolver<TMatrix>::cycle(TMatrix &A, Vector &x, const Vector &b,
         Vector defect = A * x - b;
         Vector correction(defect.size());
         smoother.get_corrector()->apply(correction, defect);
-        x -= correction;
+        // Update with SIMD parallelization
+        #pragma omp parallel for simd schedule(static)
+        for(std::size_t j = 0; j < x.size(); ++j) {
+            x[j] -= correction[j];
+        }
     }
     // Compute residual
     Vector r = b - A * x;
@@ -73,12 +80,17 @@ void MultiGridSolver<TMatrix>::cycle(TMatrix &A, Vector &x, const Vector &b,
     x += e_fine;
 
     // Post-smoothing
+    smoother.set_matrix(&A); // reset to current level after recursive call
     for (int i = 0; i < num_post_smooth; ++i) {
         // Apply one smoothing iteration: x := x - M^{-1} * (A*x - b)
         Vector defect = A * x - b;
         Vector correction(defect.size());
         smoother.get_corrector()->apply(correction, defect);
-        x -= correction;
+        // Update with SIMD parallelization
+        #pragma omp parallel for simd schedule(static)
+        for(std::size_t j = 0; j < x.size(); ++j) {
+            x[j] -= correction[j];
+        }
     }
 }
 

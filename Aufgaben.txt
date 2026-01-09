@@ -1,6 +1,4 @@
-- SparseMatrix ohne Iteratoren
-
-- Benchmark OpenMP (+ Kokkos?)
+- Gute OpenMP optimierung
 
 Optional:
 - Eigenwertzerlegung (Eigenwerte vor allem) von Matrizen berechnen mithilfe von den Lösern

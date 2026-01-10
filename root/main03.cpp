@@ -389,7 +389,7 @@ void run_solver_benchmarks(size_t nElemsPerDim, bool bVerbose = false,
         
         LUSolver<SparseMatrix> base_solver;
         MultiGridSolver<SparseMatrix> mg(smoother, base_solver);
-        mg.set_parameters(2, 2, 1, 3);
+        mg.set_parameters(4, 4, 2, 2);
         mg.set_convergence_params(5000, 1e-15, 1e-8);
         mg.set_verbose(bVerbose);
         
@@ -426,8 +426,8 @@ int main(int argc, char** argv)
     // Run benchmarks
     std::cout << "\n\n" << BOLD << CYAN << "Starting Performance Benchmarks..." << RESET << std::endl;
     
-    for (int i = 1; i <= 6; ++i) {
-        run_solver_benchmarks(i*10, false, false, false, true);
+    for (int i = 2; i <= 10; ++i) {
+        run_solver_benchmarks(1<<i, false, false, false, true);
     }
     //TODO: fix multigrid convergence rate for large problems!
 

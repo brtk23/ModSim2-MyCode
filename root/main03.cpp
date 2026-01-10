@@ -429,7 +429,13 @@ int main(int argc, char** argv)
     for (int i = 2; i <= 10; ++i) {
         run_solver_benchmarks(1<<i, false, false, false, true);
     }
-    //TODO: fix multigrid convergence rate for large problems!
+    // 1024x1024 grid
+    // without saving hierarchy and without openmp:
+    // multigrid: 13 sec (15 iter) 
+    // with hierarchy and without openmp:
+    // multigrid: 11 sec (15 iter)
+    // with hierarchy and with openmp:
+    // multigrid: ? sec (15 iter)
 
     return 0;
 }

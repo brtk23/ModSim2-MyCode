@@ -37,8 +37,7 @@ bool Jacobi<TMatrix>::apply(vector_type& c, const vector_type& d) const
 	// Solve M * c = d <=> c = M^-1 * d where M is diag(A), so M^-1 = 1/diag(A).
 	// Calculate element-wise for vector c:
 	// => c[i] = damp * d[i] / A(i,i)
-	// Fully parallelizable: no dependencies between iterations
-	#pragma omp parallel for simd schedule(static)
+	// TODO: Fully parallelizable: no dependencies between iterations
 	for(std::size_t i = 0; i < n; ++i){
 		// direct access to diagonal
 		double diag = A(i, i);

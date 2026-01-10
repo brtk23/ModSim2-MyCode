@@ -1,6 +1,16 @@
 #include "iterative_solver.h"
 #include "lu_solver.h"
 #include <tuple>
+#include <map>
+
+// Structure to hold operators and matrix for a single grid level
+template <typename TMatrix>
+struct GridLevel {
+    TMatrix restriction;    // R: fine to coarse
+    TMatrix prolongation;   // P: coarse to fine
+    TMatrix A_coarse;       // Coarse grid operator
+    double  h_minus2;       // 1/h^2 for this level
+};
 
 template <typename TMatrix>
 class MultiGridSolver {
@@ -13,7 +23,7 @@ class MultiGridSolver {
 
         // Solve method - solves A*x = b using multigrid approach.
         // Returns tuple of (converged, iterations).
-        std::tuple<bool, size_t> solve(TMatrix &A, Vector &x, const Vector &b, 
+        std::tuple<bool, size_t> solve(const TMatrix &A, Vector &x, const Vector &b, 
                    std::size_t num_elements_per_dim);
 
         void set_base_elements_per_dim(int elements_per_dim) {
@@ -102,6 +112,15 @@ class MultiGridSolver {
         double                    min_reduction;
         bool                      bVerbose;
         
+        // Hierarchy cache: maps num_elements_per_dim to grid level data
+        mutable std::map<std::size_t, GridLevel<TMatrix>> hierarchy_cache;
+        
+        // Build the entire multigrid hierarchy for a given finest grid size
+        void build_hierarchy(std::size_t finest_elements_per_dim);
+        
+        // Get or build grid level data for a given grid size
+        const GridLevel<TMatrix>& get_grid_level(std::size_t num_elements_per_dim);
+        
         // Internal cycle method (single multigrid cycle)
-        void cycle(TMatrix &A, Vector &x, const Vector &b, std::size_t num_elements_per_dim);
+        void cycle(const TMatrix &A, Vector &x, const Vector &b, std::size_t num_elements_per_dim);
 };

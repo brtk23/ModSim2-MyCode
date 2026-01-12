@@ -389,7 +389,7 @@ void run_solver_benchmarks(size_t nElemsPerDim, bool bVerbose = false,
         
         LUSolver<SparseMatrix> base_solver;
         MultiGridSolver<SparseMatrix> mg(smoother, base_solver);
-        mg.set_parameters(4, 4, 2, 2);
+        mg.set_parameters(4, 4, 2, 8);
         mg.set_convergence_params(5000, 1e-15, 1e-8);
         mg.set_verbose(bVerbose);
         
@@ -426,7 +426,7 @@ int main(int argc, char** argv)
     // Run benchmarks
     std::cout << "\n\n" << BOLD << CYAN << "Starting Performance Benchmarks..." << RESET << std::endl;
     
-    for (int i = 2; i <= 10; ++i) {
+    for (int i = 4; i <= 10; ++i) {
         run_solver_benchmarks(1<<i, false, false, false, true);
     }
     // 1024x1024 grid
@@ -435,7 +435,13 @@ int main(int argc, char** argv)
     // with hierarchy and without openmp:
     // multigrid: 11 sec (15 iter)
     // with hierarchy and with openmp:
-    // multigrid: ? sec (15 iter)
+    // multigrid: 14 sec (15 iter)
+
+    // 128x128 grid
+    // without openmp:
+    // jacobi: 25sec (44k iter)
+    // with openmp:
+    // jacobi: 20sec (44k iter)
 
     return 0;
 }

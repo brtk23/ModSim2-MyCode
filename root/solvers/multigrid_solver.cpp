@@ -2,6 +2,8 @@
 #include "../data structures/headers/sparse_matrix.h"
 #include <cmath>
 #include <iomanip>
+#include <iostream>
+#include <chrono>
 
 template <typename TMatrix>
 MultiGridSolver<TMatrix>::MultiGridSolver(IterativeSolver<TMatrix> &smoother, 
@@ -34,14 +36,18 @@ void MultiGridSolver<TMatrix>::cycle(const TMatrix &A, Vector &x, const Vector &
     
     // Pre-smoothing to reduce high-frequency errors
     for (int i = 0; i < num_pre_smooth; ++i) {
-        Vector defect = A * x - b;
+        // Fused mat-vec and subtraction to avoid an extra temporary
+        Vector defect = A * x;
+        defect -= b;
         Vector correction(defect.size());
         smoother.get_corrector()->apply(correction, defect);
         x -= correction;
     }
     
-    // Compute residual
-    Vector r = b - A * x;
+    // Compute residual r = b - A*x without extra temporaries
+    Vector r = A * x;
+    r *= -1.0;
+    r += b;
     
     // Get cached operators for this grid transition
     const GridLevel<TMatrix>& level = get_grid_level(num_elements_per_dim);
@@ -62,7 +68,9 @@ void MultiGridSolver<TMatrix>::cycle(const TMatrix &A, Vector &x, const Vector &
     // Post-smoothing
     smoother.set_matrix(&A);
     for (int i = 0; i < num_post_smooth; ++i) {
-        Vector defect = A * x - b;
+        // Fused mat-vec and subtraction to avoid an extra temporary
+        Vector defect = A * x;
+        defect -= b;
         Vector correction(defect.size());
         smoother.get_corrector()->apply(correction, defect);
         x -= correction;
@@ -91,6 +99,7 @@ void MultiGridSolver<TMatrix>::build_hierarchy(std::size_t finest_elements_per_d
         } else {
             level.restriction = TMatrix(rows, cols);
         }
+        // 4 point averaging - each coarse grid point gets contributions from 4 fine grid points
         for (std::size_t i_coarse = 0; i_coarse < n_coarse; ++i_coarse) {
             for (std::size_t j_coarse = 0; j_coarse < n_coarse; ++j_coarse) {
                 std::size_t coarse_idx = i_coarse * n_coarse + j_coarse;
@@ -111,6 +120,7 @@ void MultiGridSolver<TMatrix>::build_hierarchy(std::size_t finest_elements_per_d
         } else {
             level.prolongation = TMatrix(cols, rows);
         }
+        // Coarse cell spreads equally to 4 fine cells
         for (std::size_t i_coarse = 0; i_coarse < n_coarse; ++i_coarse) {
             for (std::size_t j_coarse = 0; j_coarse < n_coarse; ++j_coarse) {
                 std::size_t coarse_idx = i_coarse * n_coarse + j_coarse;
@@ -133,25 +143,25 @@ void MultiGridSolver<TMatrix>::build_hierarchy(std::size_t finest_elements_per_d
         }
         
         level.h_minus2 = (n_coarse + 1) * (n_coarse + 1);
-        
+        // Just make a 5-point stencil from scratch
         for (std::size_t i = 0; i < n_coarse; ++i) {
             for (std::size_t j = 0; j < n_coarse; ++j) {
                 std::size_t idx = i * n_coarse + j;
                 level.A_coarse(idx, idx) = 4.0 * level.h_minus2;
                 
-                if (j > 0) {
+                if (j > 0) { // left neighbor
                     std::size_t idx_left = i * n_coarse + (j - 1);
                     level.A_coarse(idx, idx_left) = -level.h_minus2;
                 }
-                if (j < n_coarse - 1) {
+                if (j < n_coarse - 1) { // right neighbor
                     std::size_t idx_right = i * n_coarse + (j + 1);
                     level.A_coarse(idx, idx_right) = -level.h_minus2;
                 }
-                if (i > 0) {
+                if (i > 0) { // bottom neighbor
                     std::size_t idx_bottom = (i - 1) * n_coarse + j;
                     level.A_coarse(idx, idx_bottom) = -level.h_minus2;
                 }
-                if (i < n_coarse - 1) {
+                if (i < n_coarse - 1) { // top neighbor
                     std::size_t idx_top = (i + 1) * n_coarse + j;
                     level.A_coarse(idx, idx_top) = -level.h_minus2;
                 }
@@ -180,11 +190,18 @@ template <typename TMatrix>
 std::tuple<bool, size_t> MultiGridSolver<TMatrix>::solve(
                         const TMatrix &A, Vector &x, const Vector &b,
                         std::size_t num_elements_per_dim) {
-    // Build the entire hierarchy once before solving
+                            
+    auto start = std::chrono::high_resolution_clock::now();
     build_hierarchy(num_elements_per_dim);
+    auto end = std::chrono::high_resolution_clock::now();
+    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
+    if(bVerbose) {
+        std::cout << "Hierarchy build time: " << duration.count() << " ms" << std::endl;
+    }
     
-    // Compute initial defect norm
-    Vector residual = A * x - b;
+    // Compute initial defect norm (fused A*x - b)
+    Vector residual = A * x;
+    residual -= b;
     double residual_norm = residual.norm();
     double prev_residual_norm = 0.0;
     double b_norm = b.norm();
@@ -211,8 +228,9 @@ std::tuple<bool, size_t> MultiGridSolver<TMatrix>::solve(
         // Perform one cycle
         cycle(A, x, b, num_elements_per_dim);
         
-        // Compute residual norm
-        residual = A * x - b;
+        // Compute residual norm (fused A*x - b)
+        residual = A * x;
+        residual -= b;
         residual_norm = residual.norm();
         if(bVerbose) {
             if(iter > 0) rate = residual_norm / prev_residual_norm;

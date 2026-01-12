@@ -111,8 +111,10 @@ std::tuple<bool, size_t> IterativeSolver<TMatrix>::solve(vector_type& x, const v
 
 	std::size_t iter = 0;
 	do {
-		// compute defect d_i = b - A*x_i
-		d = b - (*(this->m_pA)) * (x); // TODO: MatMulMinus
+		// compute defect d_i = b - A*x_i (fused to avoid temporary)
+		d = (*(this->m_pA)) * (x);
+		d *= -1.0;
+		d += b;
 		if(iter == 0){
 			norm_d0 = d.norm();
 		}

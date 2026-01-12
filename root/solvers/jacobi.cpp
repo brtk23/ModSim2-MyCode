@@ -10,6 +10,10 @@
 #include "../data structures/headers/matrix.h"
 #include "../data structures/headers/sparse_matrix.h"
 
+// Threshold for enabling OpenMP parallelization
+// Only parallelize for very large independent problems, not within multigrid smoothing
+static constexpr std::size_t OMP_MIN_ROWS = 100;
+
 
 template <typename TMatrix>
 Jacobi<TMatrix>::Jacobi()
@@ -37,19 +41,24 @@ bool Jacobi<TMatrix>::apply(vector_type& c, const vector_type& d) const
 	// Solve M * c = d <=> c = M^-1 * d where M is diag(A), so M^-1 = 1/diag(A).
 	// Calculate element-wise for vector c:
 	// => c[i] = damp * d[i] / A(i,i)
-	// TODO: Fully parallelizable: no dependencies between iterations
+	// Fully parallelizable: no dependencies between iterations
+	bool has_error = false;
+	#pragma omp parallel for schedule(static) if(n > OMP_MIN_ROWS)
 	for(std::size_t i = 0; i < n; ++i){
 		// direct access to diagonal
 		double diag = A(i, i);
 		if(diag < 1e-15) {
 			// zero diagonal entry - cannot proceed
 			std::cerr << "Jacobi: Zero or almost zero diagonal entry at row " << i << std::endl;
-			return false;
+			// Note: error handling in parallel region is tricky
+			#pragma omp critical
+			has_error = true;
 		}
 		// compute correction c[i] = damp * d[i] / diag
 		c[i] = m_damp * d[i] / diag;
 	}
 	
+	if (has_error) return false;
 	return true;
 }
 

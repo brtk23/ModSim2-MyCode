@@ -52,7 +52,7 @@ bool GaussSeidel<TMatrix>::apply(vector_type& c, const vector_type& d) const {
 			std::size_t base = i * A.row_capacity();
 			std::size_t len = row_len[i];
 			// Use SIMD for reduction within single row (safe: each j only touches c[j] already computed)
-			#pragma omp simd reduction(+:sigma)
+			//#pragma omp simd reduction(+:sigma)
 			for(std::size_t k = 0; k < len; ++k) {
 				std::size_t j = col_inds[base + k];
 				if(j < i) {

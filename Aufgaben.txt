@@ -1,3 +1,6 @@
+- Konvergenzrate 0.4 => kann man optimieren, defekt geht nicht unter 1e-11
+- init funktion in multigrid solver zusammen mit base solver init und build hierarchy
+- Multigrid solver to iterative solver integrieren 
 - Gute OpenMP optimierung
 
 Optional:

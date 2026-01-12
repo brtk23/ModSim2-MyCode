@@ -28,8 +28,9 @@ void MultiGridSolver<TMatrix>::cycle(const TMatrix &A, Vector &x, const Vector &
     smoother.set_matrix(&A);
 
     if (num_elements_per_dim <= base_elements_per_dim) {
-        // Directly use the base solver
+        // Directly use the base solver 
         base_solver.set_matrix(&A);
+        base_solver.init(x); // TODO: into init function together with build_hierarchy?
         base_solver.solve(x, b);
         return;
     }

@@ -289,7 +289,7 @@ void BasicTests(size_t nElemsPerDim = 3)
  */
 void run_solver_benchmarks(size_t nElemsPerDim, bool bVerbose = false,
                            bool bJacobi = true, bool bGaussSeidel = true,
-                           bool bMultigrid = true) {
+                           bool bMultigrid = true, int seed = 0) {
     std::cout << "\n" << BOLD << YELLOW << std::string(80, '=') << RESET << std::endl;
     std::cout << BOLD << CYAN << "SOLVER BENCHMARKS (" << nElemsPerDim << "x" << nElemsPerDim 
               << " grid, " << nElemsPerDim * nElemsPerDim << " unknowns)" << RESET << std::endl;
@@ -305,7 +305,7 @@ void run_solver_benchmarks(size_t nElemsPerDim, bool bVerbose = false,
     // Benchmark LU (only for small problems)
     if (nElemsPerDim < 20) {
         x.resize(b.size());
-        std::srand(0);
+        std::srand(seed);
         for (std::size_t i = 0; i < x.size(); ++i)
             x[i] = std::rand() / (double) RAND_MAX;
         
@@ -327,12 +327,12 @@ void run_solver_benchmarks(size_t nElemsPerDim, bool bVerbose = false,
     // Benchmark Jacobi
     if (bJacobi) {
         x.resize(b.size());
-        std::srand(0);
+        std::srand(seed);
         for (std::size_t i = 0; i < x.size(); ++i)
             x[i] = std::rand() / (double) RAND_MAX;
         
         IterativeSolver<SparseMatrix> solver(A);
-        solver.set_convergence_params(50000, 1e-15, 1e-8);
+        solver.set_convergence_params(50000, 1e-15, 1e-10);
         solver.set_verbose(bVerbose);
         Jacobi<SparseMatrix> jac;
         solver.set_corrector(&jac);
@@ -351,7 +351,7 @@ void run_solver_benchmarks(size_t nElemsPerDim, bool bVerbose = false,
     // Benchmark Gauss-Seidel
     if (bGaussSeidel) {
         x.resize(b.size());
-        std::srand(0);
+        std::srand(seed);
         for (std::size_t i = 0; i < x.size(); ++i)
             x[i] = std::rand() / (double) RAND_MAX;
         
@@ -375,12 +375,12 @@ void run_solver_benchmarks(size_t nElemsPerDim, bool bVerbose = false,
     // Benchmark Multigrid
     if (bMultigrid) {
         x.resize(b.size());
-        std::srand(0);
+        std::srand(seed);
         for (std::size_t i = 0; i < x.size(); ++i)
             x[i] = std::rand() / (double) RAND_MAX;
         
         IterativeSolver<SparseMatrix> smoother(A);
-        smoother.set_convergence_params(50000, 1e-15, 1e-8);
+        smoother.set_convergence_params(50000, 1e-15, 1e-10);
         smoother.set_verbose(false); // no verbose for smoother
         GaussSeidel<SparseMatrix> gs; // fastest smoother
         //Jacobi<SparseMatrix> jac;
@@ -390,7 +390,7 @@ void run_solver_benchmarks(size_t nElemsPerDim, bool bVerbose = false,
         LUSolver<SparseMatrix> base_solver;
         MultiGridSolver<SparseMatrix> mg(smoother, base_solver);
         mg.set_parameters(4, 4, 2, 8);
-        mg.set_convergence_params(5000, 1e-15, 1e-8);
+        mg.set_convergence_params(5000, 1e-15, 1e-20);
         mg.set_verbose(bVerbose);
         
         auto [result, time] = timer.measure_with_result([&]() {
@@ -426,22 +426,17 @@ int main(int argc, char** argv)
     // Run benchmarks
     std::cout << "\n\n" << BOLD << CYAN << "Starting Performance Benchmarks..." << RESET << std::endl;
     
-    for (int i = 4; i <= 10; ++i) {
+    for (int i = 2; i <= 10; ++i) {
         run_solver_benchmarks(1<<i, false, false, false, true);
     }
+    //run_solver_benchmarks(463, false, false, false, true);
     // 1024x1024 grid
     // without saving hierarchy and without openmp:
     // multigrid: 13 sec (15 iter) 
     // with hierarchy and without openmp:
     // multigrid: 11 sec (15 iter)
     // with hierarchy and with openmp:
-    // multigrid: 14 sec (15 iter)
-
-    // 128x128 grid
-    // without openmp:
-    // jacobi: 25sec (44k iter)
-    // with openmp:
-    // jacobi: 20sec (44k iter)
+    // multigrid: ? sec (15 iter)
 
     return 0;
 }

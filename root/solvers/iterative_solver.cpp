@@ -133,11 +133,8 @@ std::tuple<bool, size_t> IterativeSolver<TMatrix>::solve(vector_type& x, const v
 			return {false, iter};
 		}
 
-		// update solution x_i+1 = x_i + c_i (parallelized with SIMD)
-		#pragma omp parallel for simd schedule(static)
-		for(std::size_t i = 0; i < x.size(); ++i) {
-			x[i] += c[i];
-		}
+		// update solution x_i+1 = x_i + c_i 
+		x += c;
 
 		if(m_bVerbose) {
 			if(iter > 0) rate = norm_di / norm_di_prev;

@@ -81,7 +81,7 @@ double& Matrix::operator()(std::size_t r, std::size_t c)
 Vector Matrix::operator*(Vector v) const
 {
     Vector result(m_rows, 0.0);
-    #pragma omp parallel for simd collapse(2)
+    //#pragma omp parallel for simd collapse(2)
     for (std::size_t i = 0; i < m_rows; ++i) {
         for (std::size_t j = 0; j < m_cols; ++j) {
             result[i] += (*this)(i, j) * v[j];
@@ -96,7 +96,7 @@ Matrix Matrix::operator*(const Matrix& m) const
         throw std::runtime_error("Matrix::operator*: Incompatible sizes.");
     }
     Matrix result(this->m_rows, m.m_cols, 0.0);
-    #pragma omp parallel for simd collapse(3)
+    //#pragma omp parallel for simd collapse(3)
     for (std::size_t i = 0; i < this->m_rows; ++i) {
         for (std::size_t j = 0; j < m.m_cols; ++j) {
             for (std::size_t k = 0; k < this->m_cols; ++k) {
@@ -110,7 +110,7 @@ Matrix Matrix::operator*(const Matrix& m) const
 Matrix Matrix::transpose() const
 {
     Matrix result(this->m_cols, this->m_rows, 0.0);
-    #pragma omp parallel for simd collapse(2)
+    //#pragma omp parallel for simd collapse(2)
     for (std::size_t i = 0; i < this->m_rows; ++i) {
         for (std::size_t j = 0; j < this->m_cols; ++j) {
             result(j, i) = (*this)(i, j);

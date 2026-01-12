@@ -38,13 +38,14 @@ bool Jacobi<TMatrix>::apply(vector_type& c, const vector_type& d) const
 	// Calculate element-wise for vector c:
 	// => c[i] = damp * d[i] / A(i,i)
 	// TODO: Fully parallelizable: no dependencies between iterations
+	//#pragma omp parallel for
 	for(std::size_t i = 0; i < n; ++i){
 		// direct access to diagonal
 		double diag = A(i, i);
 		if(diag < 1e-15) {
 			// zero diagonal entry - cannot proceed
 			std::cerr << "Jacobi: Zero or almost zero diagonal entry at row " << i << std::endl;
-			return false;
+			//return false;
 		}
 		// compute correction c[i] = damp * d[i] / diag
 		c[i] = m_damp * d[i] / diag;

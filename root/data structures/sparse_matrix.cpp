@@ -92,11 +92,11 @@ double& SparseMatrix::operator()(std::size_t r, std::size_t c)
 
 SparseMatrix SparseMatrix::operator*(double s) const {
     SparseMatrix result(this->m_rows, this->m_cols, this->m_row_capacity);
-    #pragma omp for schedule(static) nowait
+    //#pragma omp for schedule(static) nowait
     for(size_t r = 0; r < this->m_rows; ++r) {
         size_t base = r * m_row_capacity;
         //size_t len = m_row_len[r];
-        #pragma omp simd
+        //#pragma omp simd
         for(size_t i = 0; i < m_row_capacity; ++i) {
             result(r, m_col_inds[base + i]) = m_values[base + i] * s;
         }
@@ -112,12 +112,12 @@ Vector SparseMatrix::operator*(const Vector& v) const
     }
     Vector result(this->m_rows, 0.0);
     
-    #pragma omp for schedule(static)
+    //#pragma omp for schedule(static)
     for(size_t r = 0; r < this->m_rows; ++r) {
         size_t base = r * m_row_capacity;
         double sum = 0.0;
         // Branchless: unused slots have val=0 and col=0
-        #pragma omp simd reduction(+:sum)
+        //#pragma omp simd reduction(+:sum)
         for(size_t i = 0; i < m_row_capacity; ++i) {
             sum += m_values[base + i] * v[m_col_inds[base + i]];
         }
@@ -134,17 +134,17 @@ SparseMatrix SparseMatrix::operator*(const SparseMatrix& m) const
     std::size_t max_row_capacity = this->m_row_capacity * m.row_capacity();
     SparseMatrix result(this->m_rows, m.num_cols(), max_row_capacity);
     
-    #pragma omp for schedule(static) nowait
+    //#pragma omp for schedule(static) nowait
     for(size_t r = 0; r < this->m_rows; ++r) {
         size_t base1 = r * m_row_capacity;
         //size_t len1 = m_row_len[r];
-        #pragma omp simd
+        //#pragma omp simd
         for(size_t i = 0; i < m_row_capacity; ++i) {
             size_t c1 = m_col_inds[base1 + i];
             double v1 = m_values[base1 + i];
             size_t base2 = c1 * m.m_row_capacity;
             //size_t len2 = m.m_row_len[c1];
-            #pragma omp simd
+            //#pragma omp simd
             for(size_t j = 0; j < m.m_row_capacity; ++j) {
                 size_t c2 = m.m_col_inds[base2 + j];
                 double v2 = m.m_values[base2 + j];

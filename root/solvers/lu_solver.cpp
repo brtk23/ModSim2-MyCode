@@ -94,6 +94,7 @@ std::tuple<bool, size_t> LUSolver<TMatrix>::solve(vector_type& x, const vector_t
 {
 
 	if(!m_initialized) {
+		std::cerr << "LUSolver::solve: Solver not initialized - did you forget to call init()?" << std::endl;
 		return {false, 0};
 	}
 	

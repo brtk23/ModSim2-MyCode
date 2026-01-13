@@ -118,7 +118,7 @@ Vector SparseMatrix::operator*(const Vector& v) const
     }
     Vector result(this->m_rows, 0.0);
     
-    #pragma omp for schedule(static)
+    #pragma omp parallel for schedule(static) if(this->m_rows > OMP_MIN_ROWS)
     for(size_t r = 0; r < this->m_rows; ++r) {
         size_t base = r * m_row_capacity;
         double sum = 0.0;
@@ -140,7 +140,7 @@ SparseMatrix SparseMatrix::operator*(const SparseMatrix& m) const
     std::size_t max_row_capacity = this->m_row_capacity * m.row_capacity();
     SparseMatrix result(this->m_rows, m.num_cols(), max_row_capacity);
     
-    #pragma omp for schedule(static) nowait
+    #pragma omp parallel for schedule(static) if(this->m_rows > OMP_MIN_ROWS)
     for(size_t r = 0; r < this->m_rows; ++r) {
         size_t base1 = r * m_row_capacity;
         //size_t len1 = m_row_len[r];
@@ -167,6 +167,7 @@ SparseMatrix SparseMatrix::operator*(const SparseMatrix& m) const
 SparseMatrix SparseMatrix::transpose() const
 {
     SparseMatrix result(this->m_cols, this->m_rows, this->m_row_capacity);
+    #pragma omp parallel for schedule(static) if(this->m_rows > OMP_MIN_ROWS)
     for(size_t r = 0; r < this->m_rows; ++r) {
         size_t base = r * m_row_capacity;
         size_t len = m_row_len[r];
@@ -184,6 +185,7 @@ Vector SparseMatrix::transpose_multiply(const Vector& v) const
         throw std::runtime_error("SparseMatrix::transpose_multiply: Incompatible sizes.");
     }
     Vector result(this->m_cols, 0.0);
+    #pragma omp parallel for schedule(static) if(this->m_rows > OMP_MIN_ROWS)
     for(size_t r = 0; r < this->m_rows; ++r) {
         size_t base = r * m_row_capacity;
         size_t len = m_row_len[r];

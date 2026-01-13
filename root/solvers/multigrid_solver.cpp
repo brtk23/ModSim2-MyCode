@@ -21,6 +21,21 @@ MultiGridSolver<TMatrix>::MultiGridSolver(IterativeSolver<TMatrix> &smoother,
     // Members initialized in initializer list
 }
 
+/**
+ * @brief Perform a single multigrid cycle, assumes that original grid is square
+ * and num_elements_per_dim is the number of elements per dimension. Also
+ * assumes that the system matrix A corresponds to a 5-point stencil discretization
+ * of the Laplace operator on a square grid.
+ * 
+ * Also assumes that the hierarchy for the given num_elements_per_dim has already been built.
+ * 
+ * @tparam TMatrix 
+ * @param A System matrix at current level
+ * @param x Solution vector at current level
+ * @param b Right-hand side vector at current level
+ * @param num_elements_per_dim Number of elements per dimension at current level,
+ *                             assumed square grid!
+ */
 template <typename TMatrix>
 void MultiGridSolver<TMatrix>::cycle(const TMatrix &A, Vector &x, const Vector &b,
                                        std::size_t num_elements_per_dim) {
@@ -28,9 +43,8 @@ void MultiGridSolver<TMatrix>::cycle(const TMatrix &A, Vector &x, const Vector &
     smoother.set_matrix(&A);
 
     if (num_elements_per_dim <= base_elements_per_dim) {
-        // Directly use the base solver 
-        base_solver.set_matrix(&A);
-        base_solver.init(x); // TODO: into init function together with build_hierarchy?
+        // Directly use the base solver at the coarsest level
+        // Matrix A has already been set in initialization
         base_solver.solve(x, b);
         return;
     }
@@ -53,7 +67,7 @@ void MultiGridSolver<TMatrix>::cycle(const TMatrix &A, Vector &x, const Vector &
     // Get cached operators for this grid transition
     const GridLevel<TMatrix>& level = get_grid_level(num_elements_per_dim);
     
-    // Restrict residual to coarse grid
+    // Restrict residual to coarse grid, low frequency errors become high frequency
     Vector r_coarse = level.restriction * r;
     
     // Recursive call to cycle on coarser grid
@@ -76,6 +90,29 @@ void MultiGridSolver<TMatrix>::cycle(const TMatrix &A, Vector &x, const Vector &
         smoother.get_corrector()->apply(correction, defect);
         x -= correction;
     }
+}
+
+template<typename TMatrix>
+bool MultiGridSolver<TMatrix>::init(const Vector &x) {
+    auto start = std::chrono::high_resolution_clock::now();
+    build_hierarchy(static_cast<std::size_t>(std::sqrt(x.size())));
+    auto end = std::chrono::high_resolution_clock::now();
+    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
+    if(bVerbose) {
+        std::cout << "Hierarchy build time: " << duration.count() << " ms" << std::endl;
+    }
+    const TMatrix* A_base = &hierarchy_cache.begin()->second.A_coarse;
+    if (bVerbose) {
+        int rows = std::sqrt(A_base->num_rows());
+        int cols = std::sqrt(A_base->num_cols());
+        std::cout << "Initializing base solver... (" 
+                << rows << " x " << cols << ") => ("
+                << A_base->num_rows() << " x " << A_base->num_cols() << ")"
+                << std::endl;
+    }
+    base_solver.set_matrix(A_base);
+    bool initialized = base_solver.init(x);
+    return initialized;
 }
 
 template <typename TMatrix>
@@ -187,19 +224,21 @@ const GridLevel<TMatrix>& MultiGridSolver<TMatrix>::get_grid_level(std::size_t n
     throw std::runtime_error("Grid level not found in hierarchy cache");
 }
 
+/**
+ * @brief Solve A*x = b using multigrid approach. Assumes that A corresponds to
+ * a 5-point stencil discretization of the Laplace operator on a square grid.
+ * 
+ * @tparam TMatrix 
+ * @param A The system matrix
+ * @param x The solution vector (initial guess on input)
+ * @param b The right-hand side vector
+ * @param num_elements_per_dim The number of elements per dimension (assumed square grid)
+ * @return std::tuple<bool, size_t> Tuple of (converged, iterations).
+ */
 template <typename TMatrix>
 std::tuple<bool, size_t> MultiGridSolver<TMatrix>::solve(
                         const TMatrix &A, Vector &x, const Vector &b,
                         std::size_t num_elements_per_dim) {
-                            
-    auto start = std::chrono::high_resolution_clock::now();
-    build_hierarchy(num_elements_per_dim);
-    auto end = std::chrono::high_resolution_clock::now();
-    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
-    if(bVerbose) {
-        std::cout << "Hierarchy build time: " << duration.count() << " ms" << std::endl;
-    }
-    
     // Compute initial defect norm (fused A*x - b)
     Vector residual = A * x;
     residual -= b;

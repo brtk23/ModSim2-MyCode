@@ -26,6 +26,8 @@ class MultiGridSolver {
         std::tuple<bool, size_t> solve(const TMatrix &A, Vector &x, const Vector &b, 
                    std::size_t num_elements_per_dim);
 
+        bool init(const Vector &x);
+
         void set_base_elements_per_dim(int elements_per_dim) {
             base_elements_per_dim = elements_per_dim;
         }

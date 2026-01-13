@@ -16,6 +16,7 @@
 #include <iostream>
 #include <iomanip>
 #include <cstdlib>
+#include <cmath>
 #include <chrono>
 #include <functional>
 #include <string>
@@ -389,9 +390,10 @@ void run_solver_benchmarks(size_t nElemsPerDim, bool bVerbose = false,
         
         LUSolver<SparseMatrix> base_solver;
         MultiGridSolver<SparseMatrix> mg(smoother, base_solver);
-        mg.set_parameters(4, 4, 2, 8);
-        mg.set_convergence_params(5000, 1e-15, 1e-20);
+        mg.set_parameters(4, 4, 2, 8); // pre-smooth, post-smooth, recursions, base elements per dim
+        mg.set_convergence_params(50, 1e-15, 1e-10);
         mg.set_verbose(bVerbose);
+        mg.init(x);
         
         auto [result, time] = timer.measure_with_result([&]() {
             return mg.solve(A, x, b, nElemsPerDim);
@@ -427,7 +429,7 @@ int main(int argc, char** argv)
     std::cout << "\n\n" << BOLD << CYAN << "Starting Performance Benchmarks..." << RESET << std::endl;
     
     for (int i = 2; i <= 10; ++i) {
-        run_solver_benchmarks(1<<i, false, false, false, true);
+        run_solver_benchmarks(1<<i, true, false, false, true);
     }
     //run_solver_benchmarks(463, false, false, false, true);
     // 1024x1024 grid

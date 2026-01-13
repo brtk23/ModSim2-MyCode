@@ -225,6 +225,8 @@ void test_scalar_multiplication(TestRunner& test) {
 
     SparseMatrix result = m * 0.5;
 
+    std::cout << m << std::endl << result << std::endl;
+
     test.test("Scalar multiplication - (0,0)", result(0, 0) == 1.0);
     test.test("Scalar multiplication - (0,1)", result(0, 1) == 2.0);
     test.test("Scalar multiplication - (1,1)", result(1, 1) == 3.0);

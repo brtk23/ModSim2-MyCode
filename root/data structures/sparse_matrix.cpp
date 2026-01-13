@@ -101,9 +101,9 @@ SparseMatrix SparseMatrix::operator*(double s) const {
     #pragma omp parallel for schedule(static) if(this->m_rows > OMP_MIN_ROWS)
     for(size_t r = 0; r < this->m_rows; ++r) {
         size_t base = r * m_row_capacity;
-        //size_t len = m_row_len[r];
-        //#pragma omp simd
-        for(size_t i = 0; i < m_row_capacity; ++i) {
+        size_t len = m_row_len[r];
+        #pragma omp simd
+        for(size_t i = 0; i < len; ++i) {
             result(r, m_col_inds[base + i]) = m_values[base + i] * s;
         }
     }

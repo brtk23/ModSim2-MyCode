@@ -23,8 +23,12 @@ class MultiGridSolver {
 
         // Solve method - solves A*x = b using multigrid approach.
         // Returns tuple of (converged, iterations).
-        std::tuple<bool, size_t> solve(const TMatrix &A, Vector &x, const Vector &b, 
+        std::tuple<bool, size_t> solve(Vector &x, const Vector &b, 
                    std::size_t num_elements_per_dim);
+
+        void set_matrix(const TMatrix& matrix) { A_finest = &matrix; }
+        
+        void set_use_RAP(bool useRAP) { bUseRAP = useRAP; }
 
         bool init(const Vector &x);
 
@@ -114,11 +118,17 @@ class MultiGridSolver {
         double                    min_reduction;
         bool                      bVerbose;
         
+        bool                      bUseRAP;
+        const TMatrix*            A_finest = nullptr;
+
         // Hierarchy cache: maps num_elements_per_dim to grid level data
         mutable std::map<std::size_t, GridLevel<TMatrix>> hierarchy_cache;
         
         // Build the entire multigrid hierarchy for a given finest grid size
         void build_hierarchy(std::size_t finest_elements_per_dim);
+
+        // Build hierarchy using state-of-the-art restriction/prolongation (Bilinear/Full Weighting)
+        void build_hierarchy_test(std::size_t finest_elements_per_dim);
         
         // Get or build grid level data for a given grid size
         const GridLevel<TMatrix>& get_grid_level(std::size_t num_elements_per_dim);

@@ -95,59 +95,67 @@ void create2dPoissonSystemWithSize
                 std::size_t numElemsPerDim
         )
 {
-    numElemsPerDim++;
-    const std::size_t sz = numElemsPerDim - 1;
-    const double h_minus2 = numElemsPerDim * numElemsPerDim;
-    const double h2_2 = 1.0 / (2*numElemsPerDim*numElemsPerDim);
+    // number of INTERIOR elements per dimension
+    const std::size_t n = numElemsPerDim;
+    const double h = 1.0 / (n + 1);
+    const double h_minus2 = (n + 1) * (n + 1);
 
-    // square matrix
-    m.resize(sz*sz, sz*sz);
-    rhs.resize(sz*sz, 2.0);
+    // square matrix for interior unknowns
+    m.resize(n*n, n*n);
+    rhs.resize(n*n, 2.0); // -Laplace u = 2
 
-    // fill matrix and rhs
-    for (std::size_t r = 0; r < sz; ++r)
-    {
-        m(r*sz, r*sz) = 4.0 * h_minus2;
-        for (std::size_t c = 1; c < sz; ++c)
-        {   
-            m(r*sz+c, r*sz+c) = 4.0 * h_minus2;
-            m(r*sz+c, r*sz+c-1) = -h_minus2;
-            m(r*sz+c-1, r*sz+c) = -h_minus2;
-            m(c*sz+r, (c-1)*sz+r) = -h_minus2;
-            m((c-1)*sz+r, c*sz+r) = -h_minus2;
-        }
+    // Helper to get boundary value
+    auto get_boundary = [](double x, double y) {
+        return 1.0 - 0.5*x*x - 0.5*y*y;
+    };
 
-    }
-    //create rhs by first writing entries in a matrix.. its easier that was..
-    Matrix dummy(sz,sz,2.0);
-    Vector test(sz*sz, 2.0);
-    double dxy = 1.0/((double)numElemsPerDim - 2);
-    for(int i = 0; i < sz; ++i){
-        for(int j = 0; j < sz; ++j){
-             if(i == 0 || j == 0 || i == sz-1 || j == sz -1){
-                dummy(i,j) = (1 - 0.5*(i*dxy)*(i*dxy) - 0.5*(j*dxy)*(j*dxy));//* h_minus2;
+    // fill matrix using pure 5-point stencil (Dirichlet 0 implicit)
+    // We will adjust RHS for non-zero Dirichlet
+    for (std::size_t i = 0; i < n; ++i) {
+        for (std::size_t j = 0; j < n; ++j) {
+            const std::size_t idx = i * n + j;
+            m(idx, idx) = 4.0 * h_minus2;
+
+            double x = (i + 1) * h;
+            double y = (j + 1) * h;
+
+            // Left Neighbor (j-1)
+            if (j > 0) {
+                const std::size_t idx_left = i * n + (j - 1);
+                m(idx, idx_left) = -h_minus2;
+            } else {
+                // Boundary x, y-h
+                rhs[idx] += h_minus2 * get_boundary(x, 0.0);
             }
 
-        }
-    }
-    Vector rhs_new(sz*sz, 0);
-    size_t vector_index = 0;
-    // now port the entries into rhs vector without iterators
-    for(size_t i = 0; i < sz; ++i){
-        for(size_t j = 0; j < sz; ++j){
-            rhs[vector_index] = dummy(i, j);
-            // if we have dirichlet boundary condition, substitute matrix
-            // row with identity row
-            if(rhs[vector_index] != 2.0){
-                // Must clear the row first to remove old Poisson stencil entries!
-                m.clear_row(vector_index);
-                // Now set only the diagonal entry
-                m(vector_index, vector_index) = 1.0;
+            // Right Neighbor (j+1)
+            if (j + 1 < n) {
+                const std::size_t idx_right = i * n + (j + 1);
+                m(idx, idx_right) = -h_minus2;
+            } else {
+                // Boundary x, 1.0
+                rhs[idx] += h_minus2 * get_boundary(x, 1.0);
             }
-            ++vector_index;
+
+            // Bottom Neighbor (i-1)
+            if (i > 0) {
+                const std::size_t idx_bottom = (i - 1) * n + j;
+                m(idx, idx_bottom) = -h_minus2;
+            } else {
+                // Boundary 0.0, y
+                rhs[idx] += h_minus2 * get_boundary(0.0, y);
+            }
+
+            // Top Neighbor (i+1)
+            if (i + 1 < n) {
+                const std::size_t idx_top = (i + 1) * n + j;
+                m(idx, idx_top) = -h_minus2;
+            } else {
+                // Boundary 1.0, y
+                rhs[idx] += h_minus2 * get_boundary(1.0, y);
+            }
         }
     }
-
 }
 /** this function prints the solution vector or rhs vector in
  *  form of the underlying grid!
@@ -280,7 +288,6 @@ void BasicTests(size_t nElemsPerDim = 3)
 
     // create iterative solver and set parameters
     IterativeSolver<SparseMatrix> iterative_solver(A);
-    iterative_solver.set_convergence_params(500000, 1e-15, 1e-8);
     iterative_solver.set_verbose(false);
 
     // create preconditioners:
@@ -347,11 +354,12 @@ void BasicTests(size_t nElemsPerDim = 3)
     MultiGridSolver<SparseMatrix> mg(iterative_solver, base_solver);
     mg.set_parameters(2, 2, 1, 2); 
     mg.set_convergence_params(50, 1e-15, 1e-8);
+    mg.set_matrix(A);
     for (std::size_t i = 0; i < x.size(); ++i)
         x[i] = std::rand() / (double)RAND_MAX;
     mg.init(x);
 
-    auto [success3, iters3] = mg.solve(A, x, b, nElemsPerDim);
+    auto [success3, iters3] = mg.solve(x, b, nElemsPerDim);
     
     if (success3) {
         std::cout << GREEN << "   [CONVERGED] in " << iters3 << " iterations" << RESET << std::endl;
@@ -449,7 +457,6 @@ void run_solver_benchmarks(size_t nElemsPerDim, bool bVerbose = false,
             x[i] = std::rand() / (double) RAND_MAX;
         
         IterativeSolver<SparseMatrix> solver(A);
-        solver.set_convergence_params(50000, 1e-15, 1e-10);
         solver.set_verbose(bVerbose);
         Jacobi<SparseMatrix> jac;
         solver.set_corrector(&jac);
@@ -473,7 +480,6 @@ void run_solver_benchmarks(size_t nElemsPerDim, bool bVerbose = false,
             x[i] = std::rand() / (double) RAND_MAX;
         
         IterativeSolver<SparseMatrix> solver(A);
-        solver.set_convergence_params(50000, 1e-15, 1e-8);
         solver.set_verbose(bVerbose);
         GaussSeidel<SparseMatrix> gs;
         solver.set_corrector(&gs);
@@ -497,7 +503,6 @@ void run_solver_benchmarks(size_t nElemsPerDim, bool bVerbose = false,
             x[i] = std::rand() / (double) RAND_MAX;
         
         IterativeSolver<SparseMatrix> smoother(A);
-        smoother.set_convergence_params(50000, 1e-15, 1e-10);
         smoother.set_verbose(false); // no verbose for smoother
         GaussSeidel<SparseMatrix> gs; // fastest smoother
         //Jacobi<SparseMatrix> jac;
@@ -506,13 +511,15 @@ void run_solver_benchmarks(size_t nElemsPerDim, bool bVerbose = false,
         
         LUSolver<SparseMatrix> base_solver;
         MultiGridSolver<SparseMatrix> mg(smoother, base_solver);
-        mg.set_parameters(4, 4, 2, 8); // pre-smooth, post-smooth, recursions, base elements per dim
-        mg.set_convergence_params(50, 1e-15, 1e-10);
+        mg.set_parameters(3, 3, 2, 2); // pre-smooth, post-smooth, recursions, base elements per dim
+        mg.set_convergence_params(50, 1e-5, 1e-15);
         mg.set_verbose(bVerbose);
+        mg.set_matrix(A); // Set matrix reference
+        //mg.set_use_RAP(true); // enable RAP (Galerkin Product for A_H)
         mg.init(x);
         
         auto [result, time] = timer.measure_with_result([&]() {
-            return mg.solve(A, x, b, nElemsPerDim);
+            return mg.solve(x, b, nElemsPerDim);
         });
         auto [conv, iters] = result;
 
@@ -539,14 +546,14 @@ int main(int argc, char** argv)
     std::cout << "Running in serial mode (OpenMP disabled)." << std::endl;
 #endif
 
-    BasicTests(8);
+    //BasicTests(8);
 
-    // // Run benchmarks
-    // std::cout << "\n\n" << BOLD << CYAN << "Starting Performance Benchmarks..." << RESET << std::endl;
+    // Run benchmarks
+    std::cout << "\n\n" << BOLD << CYAN << "Starting Performance Benchmarks..." << RESET << std::endl;
     
-    // for (int i = 2; i <= 10; ++i) {
-    //     run_solver_benchmarks(1<<i, true, false, false, true);
-    // }
+    for (int i = 2; i <= 12; ++i) {
+        run_solver_benchmarks(1<<i, true, false, false, true);
+    }
     //run_solver_benchmarks(463, false, false, false, true);
     // 1024x1024 grid
     // without saving hierarchy and without openmp:

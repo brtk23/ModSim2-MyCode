@@ -31,8 +31,8 @@ IterativeSolver<TMatrix>::IterativeSolver()
 {
 	m_corrector = nullptr;
 	m_nit = 5000;
-	m_minDef = 1e-15;
-	m_minRed = 1e-8;
+	m_minDef = 1e-5;
+	m_minRed = 1e-15;
 	m_bVerbose = false;
 	m_bInited = false;
 }

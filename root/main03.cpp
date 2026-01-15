@@ -417,7 +417,14 @@ void run_solver_benchmarks(size_t nElemsPerDim, bool bVerbose = false,
                            bool bMultigrid = true, int seed = 0) {
     std::cout << "\n" << BOLD << YELLOW << std::string(80, '=') << RESET << std::endl;
     std::cout << BOLD << CYAN << "SOLVER BENCHMARKS (" << nElemsPerDim << "x" << nElemsPerDim 
-              << " grid, " << nElemsPerDim * nElemsPerDim << " unknowns)" << RESET << std::endl;
+              << " grid, ";
+    double num_unknowns = nElemsPerDim * nElemsPerDim;
+    if (num_unknowns >= 1000000)
+        std::cout << std::setprecision(3) << num_unknowns / 1000000 <<  "M";
+    else if (num_unknowns >= 1000)
+        std::cout << std::setprecision(3) << num_unknowns / 1000 << "K";
+    std::cout << " unknowns)" << RESET << std::endl; 
+    
     std::cout << BOLD << YELLOW << std::string(80, '=') << RESET << "\n" << std::endl;
 
     Timer<> timer;

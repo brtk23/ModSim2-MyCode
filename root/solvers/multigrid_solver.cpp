@@ -226,7 +226,7 @@ template<typename TMatrix>
 bool MultiGridSolver<TMatrix>::init(const Vector &x) {
     auto start = std::chrono::high_resolution_clock::now();
     const std::size_t finest_elements_per_dim = static_cast<std::size_t>(std::sqrt(x.size()));
-    build_hierarchy_test(finest_elements_per_dim);
+    build_hierarchy(finest_elements_per_dim);
     auto end = std::chrono::high_resolution_clock::now();
     auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
     if(bVerbose) {

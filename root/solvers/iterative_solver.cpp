@@ -141,9 +141,9 @@ std::tuple<bool, size_t> IterativeSolver<TMatrix>::solve(vector_type& x, const v
 			if(iter > 0) reduction = norm_di / norm_d0;
 			std::cout << iter << "\t" << std::scientific << std::setprecision(6) 
 					  << norm_di << "\t";
-			if(iter==0) std::cout << "----------\t"; 
+			if(iter==0) std::cout << "--------\t"; 
             else std::cout << std::fixed << std::setprecision(6) << rate << "\t";
-            if(iter==0) std::cout << "-------------\n"; 
+            if(iter==0) std::cout << "-------\n"; 
             else std::cout << std::scientific << std::setprecision(6) << reduction << std::endl;
 		}
 

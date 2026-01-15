@@ -14,8 +14,8 @@
 // Threshold for enabling OpenMP parallelization
 // Below this size, overhead of thread creation outweighs benefit
 // Increased significantly for multigrid: only parallelize at coarsest level or for standalone large ops
-static constexpr std::size_t OMP_MIN_ROWS = 10000;
-static constexpr std::size_t OMP_MIN_SIZE = 10000000;  // For matrix-matrix operations
+static constexpr std::size_t OMP_MIN_ROWS = 1000;
+static constexpr std::size_t OMP_MIN_SIZE = 1000000;  // For matrix-matrix operations
 
 SparseMatrix::SparseMatrix()
 	: SparseMatrix(0, 0)

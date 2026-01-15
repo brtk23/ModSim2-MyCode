@@ -428,7 +428,7 @@ void run_solver_benchmarks(size_t nElemsPerDim, bool bVerbose = false,
     create2dPoissonSystemWithSize(A, b, nElemsPerDim);
 
     // Benchmark LU (only for small problems)
-    if (nElemsPerDim < 20) {
+    if (nElemsPerDim < 16) {
         x.resize(b.size());
         std::srand(seed);
         for (std::size_t i = 0; i < x.size(); ++i)
@@ -506,6 +506,7 @@ void run_solver_benchmarks(size_t nElemsPerDim, bool bVerbose = false,
         smoother.set_verbose(false); // no verbose for smoother
         GaussSeidel<SparseMatrix> gs; // fastest smoother
         //Jacobi<SparseMatrix> jac;
+        //jac.set_damping(0.8); // damped Jacobi
         smoother.set_corrector(&gs);
         smoother.init(x);
         
@@ -546,23 +547,16 @@ int main(int argc, char** argv)
     std::cout << "Running in serial mode (OpenMP disabled)." << std::endl;
 #endif
 
-    //BasicTests(8);
+    BasicTests(4);
 
     // Run benchmarks
     std::cout << "\n\n" << BOLD << CYAN << "Starting Performance Benchmarks..." << RESET << std::endl;
     
-    for (int i = 2; i <= 12; ++i) {
+    for (int i = 2; i <= 11; ++i) {
         run_solver_benchmarks(1<<i, true, false, false, true);
     }
-    //run_solver_benchmarks(463, false, false, false, true);
-    // 1024x1024 grid
-    // without saving hierarchy and without openmp:
-    // multigrid: 13 sec (15 iter) 
-    // with hierarchy and without openmp:
-    // multigrid: 11 sec (15 iter)
-    // with hierarchy and with openmp:
-    // multigrid: ? sec (15 iter)
 
+    //run_solver_benchmarks(443, true, false, false, true);
     return 0;
 }
 

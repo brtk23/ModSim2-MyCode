@@ -201,9 +201,9 @@ std::tuple<bool, size_t> MultiGridSolver<TMatrix>::solve(
             if(iter > 0) reduction = residual_norm / initial_residual_norm;
             std::cout << iter << "\t" << std::scientific << std::setprecision(6) 
                       << residual_norm << "\t";
-            if(iter==0) std::cout << "----------\t"; 
+            if(iter==0) std::cout << "--------\t"; 
             else std::cout << std::fixed << std::setprecision(6) << rate << "\t";
-            if(iter==0) std::cout << "-------------\n"; 
+            if(iter==0) std::cout << "-------\n"; 
             else std::cout << std::scientific << std::setprecision(6) << reduction << std::endl;
         }
         // Check convergence: absolute defect or relative reduction
@@ -370,6 +370,9 @@ void MultiGridSolver<TMatrix>::build_hierarchy_test(std::size_t finest_elements_
     while (current_size > base_elements_per_dim) {
         std::size_t n_fine = current_size;
         std::size_t n_coarse = current_size / 2;
+        if (n_coarse < 2 && base_elements_per_dim >=2) {
+            n_coarse = 2; // ensure we don't go below base grid (2x2)
+        }
         std::size_t rows = n_coarse * n_coarse;
         std::size_t cols = n_fine * n_fine;
         

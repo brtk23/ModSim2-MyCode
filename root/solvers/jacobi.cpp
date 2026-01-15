@@ -12,7 +12,7 @@
 
 // Threshold for enabling OpenMP parallelization
 // Only parallelize for very large independent problems, not within multigrid smoothing
-static constexpr std::size_t OMP_MIN_ROWS = 100;
+static constexpr std::size_t OMP_MIN_ROWS = 1000;
 
 
 template <typename TMatrix>

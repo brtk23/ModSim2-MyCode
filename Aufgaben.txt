@@ -1,4 +1,11 @@
-- Konvergenzrate 0.4 => kann man optimieren, defekt geht nicht unter 1e-11
+- Multigrid für singulär gestörte Probleme implementieren
+    -> Kopplung in x oder y Richtung (im 5pkt-Stern)
+    ist sehr klein, wodurch Glätter in die Richtung nicht glätten
+    -> Restringieren nur entlang einer Achse 
+    (die geschwächte Seite wird nicht restringiert)
+    ODER unvollständige LR-Zerlegung 
+    (sehr kleine Werte in A Matrix durch schwache Kopplung werden ignoriert)
+    
 - Multigrid solver to iterative solver integrieren 
 - Gute OpenMP optimierung
 

@@ -5,9 +5,16 @@
     (die geschwächte Seite wird nicht restringiert)
     ODER unvollständige LR-Zerlegung 
     (sehr kleine Werte in A Matrix durch schwache Kopplung werden ignoriert)
-    
+
 - Multigrid solver to iterative solver integrieren 
 - Gute OpenMP optimierung
+
+
+
+
+
+
+
 
 Optional:
 - Eigenwertzerlegung (Eigenwerte vor allem) von Matrizen berechnen mithilfe von den Lösern

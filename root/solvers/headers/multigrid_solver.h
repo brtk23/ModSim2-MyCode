@@ -117,7 +117,8 @@ class MultiGridSolver {
         double                    min_defect;
         double                    min_reduction;
         bool                      bVerbose;
-        
+        bool                      initialized = false;
+
         bool                      bUseRAP;
         const TMatrix*            A_finest = nullptr;
 

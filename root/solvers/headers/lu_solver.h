@@ -24,7 +24,7 @@ class LUSolver
 		// constructor
 		LUSolver();
 
-		/// constructor with matrix
+		// constructor with matrix
 		LUSolver(const matrix_type& mat);
 
 		/** @brief Perform LU decomposition
@@ -32,11 +32,11 @@ class LUSolver
 		 * The decomposed matrix is held as a member in an object of this class.
 		 * This method has to be executed once prior to any call to solve().
 		 *
-		 * @return  true iff decomposition succeeded
+		 * @return  true if decomposition succeeded
 		 */
 		virtual bool init(const vector_type& x);
 
-		/// set matrix
+		// set matrix
 		virtual void set_matrix(const matrix_type* mat);
 
 		/** @brief Solve a linear system using the LU decomposition

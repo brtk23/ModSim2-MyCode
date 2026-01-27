@@ -44,7 +44,7 @@ class SparseMatrix
 		/// Return number of columns
 		std::size_t num_cols() const { return m_cols; }
 
-		// Return row capacity (for debugging)
+		// Return row capacity
 		std::size_t row_capacity() const { return m_row_capacity; }
 
 		// Return m_values vector (for debugging)

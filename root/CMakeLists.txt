@@ -40,6 +40,9 @@ add_executable(ModSim2_Praktikum
     "solvers/iterative_solver.cpp"
     "solvers/lu_solver.cpp"
     "solvers/multigrid_solver.cpp"
+    "solvers/ilu.cpp"
+    "problems/2d_poisson.cpp"
+    "problems/2d_poisson_settings.cpp"
 )
 
 # Add the current source directory to the executable's include search path (for #include "...")

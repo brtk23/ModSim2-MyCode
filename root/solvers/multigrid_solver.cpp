@@ -1,6 +1,7 @@
 #include "headers/multigrid_solver.h"
 #include "../data structures/headers/sparse_matrix.h"
 #include "../data structures/headers/matrix.h"
+#include "../problems/headers/2d_poisson_settings.h"
 #include <algorithm>
 #include <cmath>
 #include <iomanip>
@@ -15,6 +16,8 @@
 // used throughout the multigrid implementation.
 template <typename TMatrix>
 TMatrix build_poisson_matrix(std::size_t num_elements_per_dim) {
+    double eps_x = PoissonSettings::get_EPS_X();
+    double eps_y = PoissonSettings::get_EPS_Y();
     const std::size_t n = num_elements_per_dim;
     const std::size_t n_unknowns = n * n;
 
@@ -31,23 +34,23 @@ TMatrix build_poisson_matrix(std::size_t num_elements_per_dim) {
     for (std::size_t i = 0; i < n; ++i) {
         for (std::size_t j = 0; j < n; ++j) {
             const std::size_t idx = i * n + j;
-            A(idx, idx) = 4.0 * h_minus2;
+            A(idx, idx) = (2.0 * (eps_x + eps_y)) * h_minus2;;
 
-            if (j > 0) {
+            if (j > 0) { // Left Neighbor (j-1)
                 const std::size_t idx_left = i * n + (j - 1);
-                A(idx, idx_left) = -h_minus2;
+                A(idx, idx_left) = -eps_x * h_minus2;
             }
-            if (j + 1 < n) {
+            if (j + 1 < n) { // Right Neighbor (j+1)
                 const std::size_t idx_right = i * n + (j + 1);
-                A(idx, idx_right) = -h_minus2;
+                A(idx, idx_right) = -eps_x * h_minus2;
             }
-            if (i > 0) {
+            if (i > 0) { // Bottom Neighbor (i-1)
                 const std::size_t idx_bottom = (i - 1) * n + j;
-                A(idx, idx_bottom) = -h_minus2;
+                A(idx, idx_bottom) = -eps_y * h_minus2;
             }
-            if (i + 1 < n) {
+            if (i + 1 < n) { // Top Neighbor (i+1)
                 const std::size_t idx_top = (i + 1) * n + j;
-                A(idx, idx_top) = -h_minus2;
+                A(idx, idx_top) = -eps_y * h_minus2;
             }
         }
     }
@@ -93,6 +96,7 @@ void MultiGridSolver<TMatrix>::cycle(const TMatrix &A, Vector &x, const Vector &
                                        std::size_t num_elements_per_dim) {
     // Always bind the smoother to the matrix of the current level
     smoother.set_matrix(&A);
+    smoother.init(x); // x is never used but for interface compliance
 
     if (num_elements_per_dim <= base_elements_per_dim) {
         // Directly use the base solver at the coarsest level
@@ -134,6 +138,7 @@ void MultiGridSolver<TMatrix>::cycle(const TMatrix &A, Vector &x, const Vector &
 
     // Post-smoothing
     smoother.set_matrix(&A);
+    smoother.init(x); // x is never used but for interface compliance
     for (int i = 0; i < num_post_smooth; ++i) {
         // Fused mat-vec and subtraction to avoid an extra temporary
         Vector defect = A * x;
@@ -162,6 +167,9 @@ std::tuple<bool, size_t> MultiGridSolver<TMatrix>::solve(
         throw std::runtime_error("MultiGridSolver: Matrix not set!");
     }
     const TMatrix& A = *A_finest;
+    if (!initialized) {
+        throw std::runtime_error("MultiGridSolver: Not initialized! Call init() before solve().");
+    }
 
     // Compute initial defect norm (fused A*x - b)
     Vector residual = A * x;
@@ -224,14 +232,16 @@ std::tuple<bool, size_t> MultiGridSolver<TMatrix>::solve(
 
 template<typename TMatrix>
 bool MultiGridSolver<TMatrix>::init(const Vector &x) {
+    // Build hierarchy
     auto start = std::chrono::high_resolution_clock::now();
     const std::size_t finest_elements_per_dim = static_cast<std::size_t>(std::sqrt(x.size()));
-    build_hierarchy(finest_elements_per_dim);
+    build_hierarchy_test(finest_elements_per_dim);
     auto end = std::chrono::high_resolution_clock::now();
     auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
     if(bVerbose) {
         std::cout << "Hierarchy build time: " << duration.count() << " ms" << std::endl;
     }
+    // Initialize base solver at coarsest level
     const TMatrix* A_base = &hierarchy_cache.begin()->second.A_coarse;
     if (bVerbose) {
         int rows = std::sqrt(A_base->num_rows());
@@ -242,14 +252,12 @@ bool MultiGridSolver<TMatrix>::init(const Vector &x) {
                 << std::endl;
     }
     base_solver.set_matrix(A_base);
-    bool initialized = base_solver.init(x);
-    if (!initialized) {
+    bool base_initialized = base_solver.init(x);
+    if (!base_initialized) {
         return false;
     }
 
-    // // Deterministic seeds for reproducible checks
-    // std::srand(0);
-    // verify_prolongation_restriction_properties(hierarchy_cache, bVerbose);
+    initialized = true;
     return true;
 }
 

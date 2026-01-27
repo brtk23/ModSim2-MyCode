@@ -1,9 +1,3 @@
-/*
- * lu_solver.cpp
- *
- *  Created on: 2019-05-03
- *      Author: 
- */
 #include <cassert>
 #include <cmath>
 #include <cstddef>
@@ -49,9 +43,12 @@ bool LUSolver<TMatrix>::init(const vector_type& x)
 		return false; // Matrix must be square
 	}
 	
-	if (std::is_same<TMatrix, SparseMatrix>::value) {
-		// If matrix is sparse: create with worst-case capacity and copy non-zeros via indexed access
-		m_decomp = TMatrix(n, n, n);
+	std::size_t max_rc = n;
+
+	if constexpr (std::is_same<TMatrix, SparseMatrix>::value) {
+		// If matrix is sparse: 
+		// Copy non-zeros via indexed access.
+		m_decomp = TMatrix(n, n, std::max(max_rc, n));
 		for(std::size_t i = 0; i < n; ++i) {
 			for(std::size_t j = 0; j < n; ++j) {
 				double val = A(i, j);
@@ -70,14 +67,19 @@ bool LUSolver<TMatrix>::init(const vector_type& x)
 		}
 	}
 	
-	// Perform LU decomposition without pivoting
+	// Perform LU decomposition
 	for(std::size_t k = 0; k < n; ++k) {
 		if(std::abs(m_decomp(k, k)) < 1e-15) {
 			return false; // Pivot too small
 		}
 		
+		// Go down each row below pivot
 		for(std::size_t i = k + 1; i < n; ++i) {
+			// Compute multiplier, L(i,k) entry 
+			// (how much of row k to subtract from row i to eliminate)
 			m_decomp(i, k) /= m_decomp(k, k);
+			// Go through columns to the right and
+			// update U entries using gauss elimination.
 			for(std::size_t j = k + 1; j < n; ++j) {
 				m_decomp(i, j) -= m_decomp(i, k) * m_decomp(k, j);
 			}

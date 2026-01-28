@@ -23,6 +23,9 @@
 #include <chrono>
 #include <functional>
 #include <string>
+#include <map>
+#include <vector>
+#include <sstream>
 #if defined(_OPENMP)
 #include "omp.h"
 #endif
@@ -71,6 +74,19 @@ public:
         return {result, duration.count()};
     }
 };
+
+/**
+ * @brief Struct to hold a single benchmark result
+ */
+struct BenchmarkResult {
+    size_t problem_size;  // Total number of unknowns (nElemsPerDim^2)
+    double time_ms;       // Total time for convergence in milliseconds
+};
+
+/**
+ * @brief Type alias for organized solver results: solver_name -> vector of results
+ */
+using SolverResultsMap = std::map<std::string, std::vector<BenchmarkResult>>;
 
 /**
  * @brief Print a formatted benchmark result
@@ -405,8 +421,9 @@ void BasicTests(size_t nElemsPerDim = 3)
 
 /**
  * Run benchmarks for all solvers
+ * @return Map of solver names to their benchmark results
  */
-void run_solver_benchmarks(size_t nElemsPerDim, bool bVerbose = false,
+SolverResultsMap run_solver_benchmarks(size_t nElemsPerDim, bool bVerbose = false,
                            bool bJacobi = true, bool bGaussSeidel = true,
                            bool bMultigrid = true, bool bILU = true, int seed = 0) {
     std::cout << "\n" << BOLD << YELLOW << std::string(80, '=') << RESET << std::endl;
@@ -424,6 +441,8 @@ void run_solver_benchmarks(size_t nElemsPerDim, bool bVerbose = false,
     std::cout << BOLD << YELLOW << std::string(80, '=') << RESET << "\n" << std::endl;
 
     Timer<> timer;
+    SolverResultsMap results;
+    size_t total_unknowns = nElemsPerDim * nElemsPerDim;
     
     // Setup problem
     SparseMatrix A(nElemsPerDim * nElemsPerDim, nElemsPerDim * nElemsPerDim, 5);
@@ -444,12 +463,12 @@ void run_solver_benchmarks(size_t nElemsPerDim, bool bVerbose = false,
             lu.init(x);
             lu.solve(x, b);
         });
-        //printVectorOnGrid(x, nElemsPerDim);
         
-        print_benchmark_result("LU Decomposition", time, true, 1); // Direct solver always converges in 1 iteration
+        results["LU Decomposition"].push_back({total_unknowns, time});
+        print_benchmark_result("LU Decomposition", time, true, 1);
     } else {
         std::cout << std::left << std::setw(20) << "LU Decomposition" << ": "
-                  << YELLOW << "SKIPPED (problem too large)" << RESET << std::endl;
+                  << YELLOW << "SKIPPED (problem too large)\n" << RESET << std::endl;
     }
 
     // Benchmark ILU 
@@ -470,8 +489,9 @@ void run_solver_benchmarks(size_t nElemsPerDim, bool bVerbose = false,
         });
         auto [conv, iters] = result;
         
-        //printVectorOnGrid(x, nElemsPerDim);
-
+        if (conv) {
+            results["Incomplete LU"].push_back({total_unknowns, time});
+        }
         print_benchmark_result("Incomplete LU", time, conv, iters);
     }
 
@@ -493,8 +513,9 @@ void run_solver_benchmarks(size_t nElemsPerDim, bool bVerbose = false,
         });
         auto [conv, iters] = result;
         
-        //printVectorOnGrid(x, nElemsPerDim);
-
+        if (conv) {
+            results["Jacobi"].push_back({total_unknowns, time});
+        }
         print_benchmark_result("Jacobi", time, conv, iters);
     }
     
@@ -516,8 +537,9 @@ void run_solver_benchmarks(size_t nElemsPerDim, bool bVerbose = false,
         });
         auto [conv, iters] = result;
 
-        //printVectorOnGrid(x, nElemsPerDim);
-        
+        if (conv) {
+            results["Gauss-Seidel"].push_back({total_unknowns, time});
+        }
         print_benchmark_result("Gauss-Seidel", time, conv, iters);
     }
     
@@ -529,22 +551,18 @@ void run_solver_benchmarks(size_t nElemsPerDim, bool bVerbose = false,
             x[i] = std::rand() / (double) RAND_MAX;
         
         IterativeSolver<SparseMatrix> smoother(A);
-        smoother.set_verbose(false); // no verbose for smoother
-        GaussSeidel<SparseMatrix> gs; // fastest smoother
-        //Jacobi<SparseMatrix> jac;
-        //jac.set_damping(0.8); // damped Jacobi
+        smoother.set_verbose(false);
+        GaussSeidel<SparseMatrix> gs;
         ILUSolver ilu;
-        smoother.set_corrector(&ilu);
+        smoother.set_corrector(&gs);
         smoother.init(x);
         
         LUSolver<SparseMatrix> base_solver;
         MultiGridSolver<SparseMatrix> mg(smoother, base_solver);
-        // 3, 3, 2, 2 is good for isotropic problems with GS or Jacobi
-        mg.set_parameters(1, 1, 2, 2); // pre-smooth, post-smooth, recursions, base elements per dim
+        mg.set_parameters(3, 3, 2, 2);
         mg.set_convergence_params(50, 1e-5, 1e-15);
         mg.set_verbose(bVerbose);
-        mg.set_matrix(A); // Set matrix reference
-        //mg.set_use_RAP(true); // enable RAP (Galerkin Product for A_H)
+        mg.set_matrix(A);
         mg.init(x);
         
         auto [result, time] = timer.measure_with_result([&]() {
@@ -552,12 +570,119 @@ void run_solver_benchmarks(size_t nElemsPerDim, bool bVerbose = false,
         });
         auto [conv, iters] = result;
 
-        //printVectorOnGrid(x, nElemsPerDim);
-        
+        if (conv) {
+            results["Multigrid"].push_back({total_unknowns, time});
+        }
         print_benchmark_result("Multigrid", time, conv, iters);
     }
     
     std::cout << "\n" << BOLD << YELLOW << std::string(80, '=') << RESET << "\n" << std::endl;
+    
+    return results;
+}
+
+/**
+ * @brief Analyze and print complexity for a single solver
+ * @param solver_name Name of the solver
+ * @param results Vector of benchmark results for this solver across all problem sizes
+ */
+void print_complexity_analysis(const std::string& solver_name, const std::vector<BenchmarkResult>& results) {
+    if (results.empty()) return;
+    
+    const int col_width = 18;
+    const int total_width = 102;  // Total width including borders and separators
+    
+    // Print solver header
+    std::cout << "\n" << BOLD << CYAN << "+" << std::string(total_width - 2, '=') << "+" << RESET << std::endl;
+    std::cout << BOLD << CYAN << "| " << std::left << std::setw(total_width - 4) << solver_name 
+              << " |" << RESET << std::endl;
+    std::cout << BOLD << CYAN << "+" << std::string(total_width - 2, '=') << "+" << RESET << std::endl;
+    
+    // Print table header
+    std::cout << BOLD << CYAN << "| " << RESET
+              << std::left << std::setw(col_width) << "Problem Size"
+              << std::left << std::setw(col_width) << "Time (ms)"
+              << std::left << std::setw(col_width) << "Size Ratio"
+              << std::left << std::setw(col_width) << "Time Ratio"
+              << std::left << std::setw(col_width) << "Complexity (p)"
+              << BOLD << CYAN << " |" << RESET << std::endl;
+    
+    std::cout << BOLD << CYAN << "+" << std::string(total_width - 2, '-') << "+" << RESET << std::endl;
+    
+    std::vector<double> complexity_factors;
+    
+    for (size_t idx = 0; idx < results.size(); ++idx) {
+        std::cout << BOLD << CYAN << "| " << RESET;
+        std::cout << std::left << std::setw(col_width) << results[idx].problem_size;
+        std::cout << std::left << std::setw(col_width) << std::fixed << std::setprecision(2) << results[idx].time_ms;
+        
+        if (idx == 0) {
+            std::cout << std::left << std::setw(col_width) << "---"
+                      << std::left << std::setw(col_width) << "---"
+                      << std::left << std::setw(col_width) << "---";
+        } else {
+            double size_ratio = (double)results[idx].problem_size / results[idx-1].problem_size;
+            double time_ratio = results[idx].time_ms / results[idx-1].time_ms;
+            double complexity = std::log(time_ratio) / std::log(size_ratio);
+            complexity_factors.push_back(complexity);
+            
+            std::cout << std::left << std::setw(col_width) << std::fixed << std::setprecision(3) << size_ratio;
+            std::cout << std::left << std::setw(col_width) << std::fixed << std::setprecision(3) << time_ratio;
+            std::cout << std::left << std::setw(col_width) << std::fixed << std::setprecision(4) << complexity;
+        }
+        
+        std::cout << BOLD << CYAN << " |" << RESET << std::endl;
+    }
+    
+    std::cout << BOLD << CYAN << "+" << std::string(total_width - 2, '=') << "+" << RESET << std::endl;
+    
+    // Print statistics
+    if (!complexity_factors.empty()) {
+        double avg_complexity = 0.0;
+        double min_complexity = complexity_factors[0];
+        double max_complexity = complexity_factors[0];
+        
+        for (double cf : complexity_factors) {
+            avg_complexity += cf;
+            min_complexity = std::min(min_complexity, cf);
+            max_complexity = std::max(max_complexity, cf);
+        }
+        avg_complexity /= complexity_factors.size();
+        
+        // Determine complexity class
+        std::string complexity_class;
+        if (avg_complexity < 1.1) {
+            complexity_class = "O(n)";
+        } else if (avg_complexity < 1.4) {
+            complexity_class = "O(n log n)";
+        } else if (avg_complexity < 1.9) {
+            complexity_class = "O(n^1.5)";
+        } else if (avg_complexity < 2.1) {
+            complexity_class = "O(n^2)";
+        } else {
+            complexity_class = "O(n^p) with p > 2";
+        }
+        
+        // Statistics line
+        std::ostringstream stats_line;
+        stats_line << "Avg Complexity Factor (p): " << std::fixed << std::setprecision(4) << avg_complexity
+                   << "  |  Min: " << std::fixed << std::setprecision(4) << min_complexity
+                   << "  |  Max: " << std::fixed << std::setprecision(4) << max_complexity;
+        
+        std::cout << BOLD << CYAN << "| " << RESET;
+        std::cout << std::left << std::setw(total_width - 4) << stats_line.str();
+        std::cout << BOLD << CYAN << " |" << RESET << std::endl;
+        
+        // Complexity class line
+        std::ostringstream complexity_line;
+        complexity_line << "Estimated Complexity: " << complexity_class;
+        
+        std::cout << BOLD << CYAN << "| " << RESET;
+        std::cout << std::left << std::setw(total_width - 4) << complexity_line.str();
+        std::cout << BOLD << CYAN << " |" << RESET << std::endl;
+    }
+    
+    std::cout << BOLD << CYAN << "+" << std::string(total_width - 2, '=') << "+" << RESET << std::endl;
 }
 
 int main(int argc, char** argv)
@@ -583,15 +708,40 @@ int main(int argc, char** argv)
     bool bVerbose = 1;
     bool bJacobi = 0;
     bool bGaussSeidel = 0;
-    bool bMultigrid = 1; //TODO: make ILU work well with multigrid
-    bool bILU = 0;
+    bool bMultigrid = 1; 
+    bool bILU = 1;
 
+    // Collect benchmark results for all solvers across all problem sizes
+    SolverResultsMap all_results;
     for (int i = 2; i <= 11; ++i) {
-        run_solver_benchmarks(1<<i, 
+        size_t problem_size = 1 << i;
+        SolverResultsMap batch_results = run_solver_benchmarks(problem_size, 
             bVerbose, bJacobi, bGaussSeidel, bMultigrid, bILU);
+        
+        // Merge batch results into all_results
+        for (auto& [solver_name, results] : batch_results) {
+            for (auto& result : results) {
+                all_results[solver_name].push_back(result);
+            }
+        }
     }
 
-    //run_solver_benchmarks(1<<4, bVerbose, bJacobi, bGaussSeidel, bMultigrid, bILU);
+    // Print complexity analysis for all solvers
+    std::cout << "\n\n";
+    std::cout << BOLD << GREEN << "+" << std::string(100, '=') << "+" << RESET << std::endl;
+    std::cout << BOLD << GREEN << "|" << std::string(100, ' ') << "|" << RESET << std::endl;
+    std::cout << BOLD << GREEN << "|" << std::string(25, ' ') << "COMPLEXITY ANALYSIS SUMMARY" 
+              << std::string(47, ' ') << "|" << RESET << std::endl;
+    std::cout << BOLD << GREEN << "|" << std::string(100, ' ') << "|" << RESET << std::endl;
+    std::cout << BOLD << GREEN << "+" << std::string(100, '=') << "+" << RESET << std::endl;
+
+    // Print analysis for each solver
+    for (auto& [solver_name, results] : all_results) {
+        print_complexity_analysis(solver_name, results);
+    }
+
+    std::cout << "\n" << BOLD << GREEN << "Analysis Complete" << RESET << "\n" << std::endl;
+
     return 0;
 }
 

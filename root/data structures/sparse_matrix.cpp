@@ -18,7 +18,7 @@ static constexpr std::size_t OMP_MIN_ROWS = 1000;
 static constexpr std::size_t OMP_MIN_SIZE = 1000000;  // For matrix-matrix operations
 
 SparseMatrix::SparseMatrix()
-	: SparseMatrix(0, 0)
+	: SparseMatrix(0, 0, 0)
 {
 }
 
@@ -27,6 +27,13 @@ SparseMatrix::SparseMatrix(std::size_t r, std::size_t c, std::size_t rowCapacity
 {
     this->m_rows = r;
     this->m_cols = c;
+    if (rowCapacity > c) {
+        std::cerr << "Warning: rowCapacity > num_cols, reducing to num_cols." << std::endl;
+        rowCapacity = c; // No need for row capacity larger than number of columns
+    }
+    if (rowCapacity < 0) {
+        throw std::invalid_argument("SparseMatrix constructor: rowCapacity must be positive.");
+    }
     this->m_row_capacity = rowCapacity;
 
     this->m_values.resize(r * rowCapacity, this->m_zero);

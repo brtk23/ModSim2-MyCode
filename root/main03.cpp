@@ -135,7 +135,7 @@ bool LU_test(size_t nElem){
     
     Vector v(nElem, 1.0);
     Vector x(nElem,0.0);
-    SparseMatrix S(nElem, nElem, 5);
+    SparseMatrix S(nElem, nElem, (nElem < 5) ? nElem : 5);
     Matrix M(nElem, nElem, 0.0);
     
     std::cout << "Setting up " << nElem << "x" << nElem << " test matrices..." << std::endl;
@@ -152,11 +152,8 @@ bool LU_test(size_t nElem){
         }
     }
     
-    LUSolver<SparseMatrix> lu_sparse;
-    LUSolver<Matrix>       lu_full;
-
-    lu_sparse.set_matrix(&S);
-    lu_full.set_matrix(&M);
+    LUSolver<SparseMatrix> lu_sparse(S);
+    LUSolver<Matrix>       lu_full(M);
     
     std::cout << YELLOW << ">> Initializing sparse LU solver..." << RESET << std::endl;
     lu_sparse.init(v);
@@ -586,8 +583,8 @@ int main(int argc, char** argv)
     bool bVerbose = 1;
     bool bJacobi = 0;
     bool bGaussSeidel = 0;
-    bool bMultigrid = 0;
-    bool bILU = 1;
+    bool bMultigrid = 1; //TODO: make ILU work well with multigrid
+    bool bILU = 0;
 
     for (int i = 2; i <= 11; ++i) {
         run_solver_benchmarks(1<<i, 

@@ -50,6 +50,7 @@ bool ILUSolver::init(const vector_type& x)
 	
 	// Build column caches: for each column k, store all (row, offset) pairs
 	// where m_decomp(row, k) is a non-zero
+	m_col_cache.clear();
 	m_col_cache.resize(n);
 	for(std::size_t i = 0; i < n; ++i) {
 		size_t base = i * m_decomp.row_capacity();

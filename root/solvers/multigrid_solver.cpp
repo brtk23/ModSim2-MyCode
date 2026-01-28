@@ -23,7 +23,7 @@ TMatrix build_poisson_matrix(std::size_t num_elements_per_dim) {
 
     TMatrix A = [] (std::size_t rows, std::size_t cols) {
         if constexpr (std::is_same<TMatrix, SparseMatrix>::value) {
-            return TMatrix(rows, cols, 5);
+            return TMatrix(rows, cols, (cols < 5) ? cols : 5);
         } else {
             return TMatrix(rows, cols, 0.0);
         }
@@ -291,7 +291,7 @@ void MultiGridSolver<TMatrix>::build_hierarchy(std::size_t finest_elements_per_d
         
         // Build restriction operator (R: fine -> coarse)
         if constexpr (std::is_same<TMatrix, SparseMatrix>::value) {
-            level.restriction = TMatrix(rows, cols, 4);
+            level.restriction = TMatrix(rows, cols, (cols < 4) ? cols : 4);
         } else {
             level.restriction = TMatrix(rows, cols);
         }
@@ -390,8 +390,8 @@ void MultiGridSolver<TMatrix>::build_hierarchy_test(std::size_t finest_elements_
         // R: coarse x fine (max 16 entries per row for 2D cell-centered linear interpolation)
         // P: fine x coarse (max 4 entries per row)
         if constexpr (std::is_same<TMatrix, SparseMatrix>::value) {
-            level.restriction = TMatrix(rows, cols, 16);
-            level.prolongation = TMatrix(cols, rows, 4);
+            level.restriction = TMatrix(rows, cols, (cols < 16) ? cols : 16);
+            level.prolongation = TMatrix(cols, rows, (rows < 4) ? rows : 4);
         } else {
             level.restriction = TMatrix(rows, cols);
             level.prolongation = TMatrix(cols, rows);

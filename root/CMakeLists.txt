@@ -80,9 +80,9 @@ endif()
 
 # SETUP USING 
 #cd 'c:\Users\mia-l\Documents\code\Uni\ModSim 2\My code\root';  
-#cmake -G "MinGW Makefiles" -DCMAKE_BUILD_TYPE=Release -DUSE_OPENMP=ON -S . -B build
+#cmake -G "MinGW Makefiles" -DCMAKE_BUILD_TYPE=Release -DUSE_OPENMP=OFF -S . -B ../build
 # FOR DEBUG SETUP USING
-#cmake -G "MinGW Makefiles" -DCMAKE_BUILD_TYPE=Debug -DUSE_OPENMP=ON -S . -B build  
+#cmake -G "MinGW Makefiles" -DCMAKE_BUILD_TYPE=Debug -DUSE_OPENMP=ON -S . -B ../build  
 
 # BUILD USING
-#cmake --build build
+#cmake --build ../build

@@ -590,11 +590,13 @@ void print_complexity_analysis(const std::string& solver_name, const std::vector
     if (results.empty()) return;
     
     const int col_width = 18;
-    const int total_width = 102;  // Total width including borders and separators
+    const int num_columns = 5;
+    const int content_width = col_width * num_columns;  // 90 characters for columns
+    const int total_width = content_width + 4;  // 94 total (| + 90 + |)
     
     // Print solver header
     std::cout << "\n" << BOLD << CYAN << "+" << std::string(total_width - 2, '=') << "+" << RESET << std::endl;
-    std::cout << BOLD << CYAN << "| " << std::left << std::setw(total_width - 4) << solver_name 
+    std::cout << BOLD << CYAN << "| " << std::left << std::setw(content_width) << solver_name 
               << " |" << RESET << std::endl;
     std::cout << BOLD << CYAN << "+" << std::string(total_width - 2, '=') << "+" << RESET << std::endl;
     
@@ -670,7 +672,7 @@ void print_complexity_analysis(const std::string& solver_name, const std::vector
                    << "  |  Max: " << std::fixed << std::setprecision(4) << max_complexity;
         
         std::cout << BOLD << CYAN << "| " << RESET;
-        std::cout << std::left << std::setw(total_width - 4) << stats_line.str();
+        std::cout << std::left << std::setw(content_width) << stats_line.str();
         std::cout << BOLD << CYAN << " |" << RESET << std::endl;
         
         // Complexity class line
@@ -678,7 +680,7 @@ void print_complexity_analysis(const std::string& solver_name, const std::vector
         complexity_line << "Estimated Complexity: " << complexity_class;
         
         std::cout << BOLD << CYAN << "| " << RESET;
-        std::cout << std::left << std::setw(total_width - 4) << complexity_line.str();
+        std::cout << std::left << std::setw(content_width) << complexity_line.str();
         std::cout << BOLD << CYAN << " |" << RESET << std::endl;
     }
     
@@ -709,7 +711,7 @@ int main(int argc, char** argv)
     bool bJacobi = 0;
     bool bGaussSeidel = 0;
     bool bMultigrid = 1; 
-    bool bILU = 1;
+    bool bILU = 0;
 
     // Collect benchmark results for all solvers across all problem sizes
     SolverResultsMap all_results;
@@ -728,12 +730,17 @@ int main(int argc, char** argv)
 
     // Print complexity analysis for all solvers
     std::cout << "\n\n";
-    std::cout << BOLD << GREEN << "+" << std::string(100, '=') << "+" << RESET << std::endl;
-    std::cout << BOLD << GREEN << "|" << std::string(100, ' ') << "|" << RESET << std::endl;
-    std::cout << BOLD << GREEN << "|" << std::string(25, ' ') << "COMPLEXITY ANALYSIS SUMMARY" 
-              << std::string(47, ' ') << "|" << RESET << std::endl;
-    std::cout << BOLD << GREEN << "|" << std::string(100, ' ') << "|" << RESET << std::endl;
-    std::cout << BOLD << GREEN << "+" << std::string(100, '=') << "+" << RESET << std::endl;
+    const int summary_width = 94;  // Match table width
+    std::string summary_title = "COMPLEXITY ANALYSIS SUMMARY";
+    int padding_left = ((summary_width - summary_title.length()) / 2) - 1;
+    int padding_right = summary_width - summary_title.length() - padding_left - 2;
+    
+    std::cout << BOLD << GREEN << "+" << std::string(summary_width - 2, '=') << "+" << RESET << std::endl;
+    std::cout << BOLD << GREEN << "|" << std::string(summary_width - 2, ' ') << "|" << RESET << std::endl;
+    std::cout << BOLD << GREEN << "|" << std::string(padding_left, ' ') << summary_title 
+              << std::string(padding_right, ' ') << "|" << RESET << std::endl;
+    std::cout << BOLD << GREEN << "|" << std::string(summary_width - 2, ' ') << "|" << RESET << std::endl;
+    std::cout << BOLD << GREEN << "+" << std::string(summary_width - 2, '=') << "+" << RESET << std::endl;
 
     // Print analysis for each solver
     for (auto& [solver_name, results] : all_results) {

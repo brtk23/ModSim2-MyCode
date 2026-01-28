@@ -5,7 +5,7 @@ private:
     inline static PoissonSettings* instance = nullptr; // declaration class variable
     // SETTINGS: ==============================================================
     double EPS_X = 1.0;
-    double EPS_Y = 1e-10;
+    double EPS_Y = 1e-0;
 public:
     // defines a class operation that lets clients access its unique instance.
     static double get_EPS_X() {

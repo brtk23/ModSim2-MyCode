@@ -31,7 +31,7 @@ endif()
 
 # Create an executable named "solver" from the listed source files
 add_executable(ModSim2_Praktikum
-    main03.cpp
+    main.cpp
     "data structures/matrix.cpp"
     "data structures/sparse_matrix.cpp"
     "data structures/vector.cpp"
@@ -77,7 +77,7 @@ if(USE_OPENMP)
 endif()
 
 
-
+# reminder for me:
 # SETUP USING 
 #cd 'c:\Users\mia-l\Documents\code\Uni\ModSim 2\My code\root';  
 #cmake -G "MinGW Makefiles" -DCMAKE_BUILD_TYPE=Release -DUSE_OPENMP=OFF -S . -B ../build

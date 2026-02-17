@@ -559,7 +559,10 @@ SolverResultsMap run_solver_benchmarks(size_t nElemsPerDim, bool bVerbose = fals
         
         LUSolver<SparseMatrix> base_solver;
         MultiGridSolver<SparseMatrix> mg(smoother, base_solver);
+        // actually documented so you can just hover over the functions
+        // params: pre-smoothing, post-smoothing, recursions, base_dimension
         mg.set_parameters(3, 3, 2, 2);
+        // params: max_iterations, min_residual, min_reduction
         mg.set_convergence_params(50, 1e-5, 1e-15);
         mg.set_verbose(bVerbose);
         mg.set_matrix(A);

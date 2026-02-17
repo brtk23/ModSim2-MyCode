@@ -1,4 +1,5 @@
 ### Implementierte Löser: LU, ILU, Jacobi, Gauss-Seidel, Mehrgitter-Verfahren
+### Problem: 2D-Poisson-Problem
 
 # Hallo :)
 ### Wenn ihr das Projekt korrekt kompiliert und laufen gelassen habt und wenn ihr nichts an den Einstellungen geändert habt, dann sollte der Output folgendermaßen aussehen:

@@ -11,7 +11,7 @@
 ## Aktuelle Multigrid-Parameter (out-of-the-box)
 | Parameter | Wert | Bedeutung |
 |-----------|------|-----------|
-| **Pre-Smoothing** | 3 | Glättungsiterati onen vor Rekursion |
+| **Pre-Smoothing** | 3 | Glättungsiterationen vor Rekursion |
 | **Post-Smoothing** | 3 | Glättungsiterationen nach Rekursion |
 | **Rekursionsstufen** | 2 | W-Zyklus |
 | **Base Dimension** | 2 | Grösse des gröbsten Gitters (2×2) |

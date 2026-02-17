@@ -1,3 +1,5 @@
+### Implementierte Löser: LU, ILU, Jacobi, Gauss-Seidel, Mehrgitter-Verfahren
+
 # Hallo :)
 ### Wenn ihr das Projekt korrekt kompiliert und laufen gelassen habt und wenn ihr nichts an den Einstellungen geändert habt, dann sollte der Output folgendermaßen aussehen:
 - Zuerst kommen BASIC SOLVER TESTS auf einem kleinen 4x4 Gitter (```problem_size = 4```), die immer ablaufen zur Sicherheit, um zu überprüfen, dass alle Löser funktionieren und dieselbe Lösung bekommen (verglichen mit einer LU-Zerlegung).
@@ -6,7 +8,25 @@
 - Nachdem alle Löser für alle ```problem_size``` gebechmarkt wurden, dann findet am Ende eine Laufzeitanalyse statt mit approximierter Komplexität:
   - ![Complexity Analysis Output](/img/example_complexity_analysis.png "Complexity Analysis Output")
 
-### Erklärungen zu den Einstellungen sind weiter unten.
+## Aktuelle Multigrid-Parameter (out-of-the-box)
+| Parameter | Wert | Bedeutung |
+|-----------|------|-----------|
+| **Pre-Smoothing** | 3 | Glättungsiterati onen vor Rekursion |
+| **Post-Smoothing** | 3 | Glättungsiterationen nach Rekursion |
+| **Rekursionsstufen** | 2 | W-Zyklus |
+| **Base Dimension** | 2 | Grösse des gröbsten Gitters (2×2) |
+| **Max Iterationen** | 50 | Maximale äußere Iterationen |
+| **Min Defekt** | 1e-5 | Konvergenz-Schwellenwert |
+| **Smoother** | Gauss-Seidel | Glättungsverfahren |
+
+Zusätzliche Details (so wie es aktuell im Code läuft):
+- Die Multigrid-Hierarchie wird **gecached** (Restriction/Prolongation + $A$-Matrizen pro Level), damit sie nicht jedes Mal neu gebaut werden muss.
+- **Restriktion/Prolongation:** cell-centered linear interpolation mit Full-Weighting-Restriktion (Gewichte $9/16$, $3/16$, $1/16$).
+- **Coarse-Grid Operator:** standardmäßig **Rediskretisierung** der Poisson-Matrix auf dem gröberen Gitter.
+  - Optional könnte man auf **Galerkin-Produkt** umstellen ($A_{coarse}=RAP$) über `bUseRAP`, empfehle ich aber nicht, weil langsamer und für dieses Problem/Setup unnötig.
+
+
+### Erklärungen zu den Einstellugen und wie man sie verändert sind weiter unten.
 
 # Um mein Projekt laufen zu lassen:
 ### Erst setup mit (muss nur ein Mal gemacht werden, wenn nichts an CMakeLists.txt verändert wird - sollte nicht notwendig sein): 
@@ -66,3 +86,22 @@ Die Zeilen main.cpp:709-729 für reference:
 - in problems/headers/2d_possion_settings.h kann man mit ```EPS_X``` und ```EPS_Y``` ein anisotropes 2D-Poisson-Problem einstellen mit verschiedenen Kopplungsstärken je nach Richtung. Ist momentan so eingestellt, dass beide Variablen gleich 1.0 sind und somit das Problem isotrop ist.
 
 - Das meiste ist so dokumentiert, dass man eigentlich durch main.cpp alle Einstellungsmöglichkeiten der Löser und der Benchmarks einsehen kann.
+
+---
+
+## Informationen zur Umgebung
+| Komponente | Version |
+|------------|---------|
+| **CMake** | ≥ 3.10 |
+| **C++ Standard** | C++17 | 
+| **C++ Compiler** | g++ (GCC), genauer MinGW Makefiles |
+| **C Compiler** | gcc, genauer MinGW Makefiles |
+
+### Optimierungs-Flags vom Release-Build in CMakeLists.txt (kann man in Zeile 18 wegmachen, falls es irgendwie damit nicht läuft)
+```
+-O3 -march=native -mtune=native -ffast-math -funroll-loops
+```
+
+### Dependencies
+- **OpenMP**: Optional (standardmäßig ON, aber für dieses Projekt mit -DUSE_OPENMP=OFF deaktiviert)
+- Sonst nichts externes erforderlich
